@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+const BASE_URL = "https://ar-backend-production-0c8c.up.railway.app/api/v1";
 
 interface ApiResponse<T> {
   success: boolean;
