@@ -10,6 +10,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import ProjectDetail from "./pages/ProjectDetail";
 import CreateProject from "./pages/CreateProject";
+import Demo from "./pages/Demo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/projects/new" element={<CreateProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/demo" element={<Demo />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
