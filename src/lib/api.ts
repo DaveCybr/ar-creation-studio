@@ -9,13 +9,20 @@ interface ApiResponse<T> {
 interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  expiresIn?: number;
 }
 
 interface User {
   id: string;
   email: string;
-  fullName: string;
-  createdAt: string;
+  full_name: string;
+  plan_type?: string;
+  storage_used?: string;
+  storage_limit?: string;
+  project_limit?: number;
+  is_verified?: boolean;
+  created_at: string;
+  last_login?: string;
 }
 
 interface Project {
@@ -135,8 +142,8 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async register(email: string, password: string, fullName: string): Promise<ApiResponse<AuthTokens & { user: User }>> {
-    const response = await this.request<AuthTokens & { user: User }>('/auth/register', {
+  async register(email: string, password: string, fullName: string): Promise<ApiResponse<AuthTokens>> {
+    const response = await this.request<AuthTokens>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password, fullName }),
     });
@@ -144,8 +151,8 @@ class ApiClient {
     return response;
   }
 
-  async login(email: string, password: string): Promise<ApiResponse<AuthTokens & { user: User }>> {
-    const response = await this.request<AuthTokens & { user: User }>('/auth/login', {
+  async login(email: string, password: string): Promise<ApiResponse<AuthTokens>> {
+    const response = await this.request<AuthTokens>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
@@ -163,7 +170,6 @@ class ApiClient {
       body: JSON.stringify({ oldPassword, newPassword }),
     });
   }
-
   // Upload endpoints
   async getPresignedUrl(
     fileType: 'target' | 'content',

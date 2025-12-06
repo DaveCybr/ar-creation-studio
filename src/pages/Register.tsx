@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -26,8 +26,17 @@ type RegisterForm = z.infer<typeof registerSchema>;
 
 export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
-  const { register: registerUser } = useAuth();
+  const { register: registerUser,isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string })?.from || '/dashboard';
+
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      console.log('✅ Authenticated, redirecting to:', from);
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, from]);
 
   const {
     register,
@@ -45,7 +54,6 @@ export default function Register() {
         title: 'Registrasi berhasil',
         description: 'Akun Anda telah dibuat!',
       });
-      navigate('/dashboard');
     } catch (error) {
       toast({
         title: 'Registrasi gagal',

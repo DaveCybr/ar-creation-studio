@@ -32,13 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = async (email: string, password: string) => {
-    const response = await api.login(email, password);
-    setUser(response.data.user);
+    // Login dan simpan token
+    await api.login(email, password);
+    
+    // Fetch user profile setelah login berhasil
+    const profileResponse = await api.getProfile();
+    setUser(profileResponse.data);
   };
 
   const register = async (email: string, password: string, fullName: string) => {
-    const response = await api.register(email, password, fullName);
-    setUser(response.data.user);
+    // Register dan simpan token
+    await api.register(email, password, fullName);
+    
+    // Fetch user profile setelah register berhasil
+    const profileResponse = await api.getProfile();
+    setUser(profileResponse.data);
   };
 
   const logout = () => {
