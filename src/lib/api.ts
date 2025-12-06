@@ -1,4 +1,14 @@
 const BASE_URL = "https://ar-backend-production-0c8c.up.railway.app/api/v1";
+const BACKEND_BASE = "https://ar-backend-production-0c8c.up.railway.app";
+
+// Helper function to convert relative URLs to absolute
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url; // Already absolute
+  }
+  return `${BACKEND_BASE}${url}`; // Convert relative to absolute
+}
 
 interface ApiResponse<T> {
   success: boolean;
@@ -142,8 +152,8 @@ class ApiClient {
       id: backendProject.id,
       name: backendProject.name,
       description: backendProject.description,
-      targetImageUrl: backendProject.targetImage.url,
-      contentUrl: backendProject.content.url,
+      targetImageUrl: toAbsoluteUrl(backendProject.targetImage.url),
+      contentUrl: toAbsoluteUrl(backendProject.content.url),
       contentType: backendProject.content.type,
       status: backendProject.status,
       viewCount: backendProject.stats.viewCount,
