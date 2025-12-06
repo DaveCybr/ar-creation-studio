@@ -1,12 +1,12 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { GridBackground } from '@/components/GridBackground';
-import { Navbar } from '@/components/Navbar';
-import { api, Project, ProjectAnalytics } from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { GridBackground } from "@/components/GridBackground";
+import { Navbar } from "@/components/Navbar";
+import { api, Project, ProjectAnalytics } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Pencil,
@@ -22,27 +22,31 @@ import {
   Users,
   Clock,
   Smartphone,
-} from 'lucide-react';
-import { 
-  LineChart, 
-  Line, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
+} from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-} from 'recharts';
+} from "recharts";
 
 const contentTypeIcons = {
   video: Video,
   image: Image,
-  '3d_model': Box,
+  "3d_model": Box,
 };
 
-const COLORS = ['hsl(187, 100%, 50%)', 'hsl(270, 60%, 50%)', 'hsl(215, 20%, 65%)'];
+const COLORS = [
+  "hsl(187, 100%, 50%)",
+  "hsl(270, 60%, 50%)",
+  "hsl(215, 20%, 65%)",
+];
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -67,9 +71,9 @@ export default function ProjectDetail() {
       setAnalytics(analyticsRes.data);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Gagal memuat proyek',
-        variant: 'destructive',
+        title: "Error",
+        description: "Gagal memuat proyek",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -77,11 +81,11 @@ export default function ProjectDetail() {
   };
 
   const copyShortCode = () => {
-    if (project?.qrCode.shortCode) {
+    if (project?.qrCode.url) {
       navigator.clipboard.writeText(project.qrCode.url);
       toast({
-        title: 'Berhasil',
-        description: 'Link telah disalin',
+        title: "Berhasil",
+        description: "Link telah disalin",
       });
     }
   };
@@ -117,9 +121,9 @@ export default function ProjectDetail() {
 
   const deviceData = analytics
     ? [
-        { name: 'iOS', value: analytics.deviceBreakdown.ios },
-        { name: 'Android', value: analytics.deviceBreakdown.android },
-        { name: 'Other', value: analytics.deviceBreakdown.other },
+        { name: "iOS", value: analytics.deviceBreakdown?.ios || 0 },
+        { name: "Android", value: analytics.deviceBreakdown?.android || 0 },
+        { name: "Other", value: analytics.deviceBreakdown?.other || 0 },
       ]
     : [];
 
@@ -168,7 +172,9 @@ export default function ProjectDetail() {
                     </div>
                   )}
                   <Badge
-                    variant={project.status === 'active' ? 'default' : 'secondary'}
+                    variant={
+                      project.status === "active" ? "default" : "secondary"
+                    }
                     className="absolute top-4 left-4"
                   >
                     {project.status}
@@ -182,7 +188,9 @@ export default function ProjectDetail() {
                         {project.name}
                       </h1>
                       {project.description && (
-                        <p className="text-muted-foreground">{project.description}</p>
+                        <p className="text-muted-foreground">
+                          {project.description}
+                        </p>
                       )}
                     </div>
                     <Button variant="glow" asChild>
@@ -196,15 +204,19 @@ export default function ProjectDetail() {
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Eye className="w-4 h-4" />
-                      {project.viewCount.toLocaleString()} views
+                      {(project.viewCount || 0).toLocaleString()} views
                     </span>
                     <span className="flex items-center gap-1">
                       <ContentIcon className="w-4 h-4" />
-                      {project.contentType.replace('_', ' ')}
+                      {project.contentType.replace("_", " ")}
                     </span>
                     <span>Tracking: {project.trackingQuality}</span>
-                    {project.autoPlay && <Badge variant="outline">Auto Play</Badge>}
-                    {project.loopContent && <Badge variant="outline">Loop</Badge>}
+                    {project.autoPlay && (
+                      <Badge variant="outline">Auto Play</Badge>
+                    )}
+                    {project.loopContent && (
+                      <Badge variant="outline">Loop</Badge>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -220,21 +232,48 @@ export default function ProjectDetail() {
                   {/* Stats Grid */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {[
-                      { label: 'Total Views', value: analytics.totalViews, icon: TrendingUp },
-                      { label: 'Unique Users', value: analytics.uniqueUsers, icon: Users },
-                      { label: 'Avg Duration', value: `${Math.round(analytics.avgSessionDuration)}s`, icon: Clock },
-                      { label: 'Devices', value: Object.values(analytics.deviceBreakdown).reduce((a, b) => a + b, 0), icon: Smartphone },
-                    ].map((stat, index) => (
+                      {
+                        label: "Total Views",
+                        value: analytics?.totalViews || 0,
+                        icon: TrendingUp,
+                      },
+                      {
+                        label: "Unique Users",
+                        value: analytics?.uniqueUsers || 0,
+                        icon: Users,
+                      },
+                      {
+                        label: "Avg Duration",
+                        value: analytics?.avgSessionDuration
+                          ? `${Math.round(analytics.avgSessionDuration)}s`
+                          : "0s",
+                        icon: Clock,
+                      },
+                      {
+                        label: "Devices",
+                        value: analytics?.deviceBreakdown
+                          ? Object.values(analytics.deviceBreakdown).reduce(
+                              (a, b) => a + b,
+                              0
+                            )
+                          : 0,
+                        icon: Smartphone,
+                      },
+                    ].map((stat) => (
                       <div
                         key={stat.label}
                         className="glass rounded-xl p-4 border border-border/50"
                       >
                         <div className="flex items-center gap-2 mb-2">
                           <stat.icon className="w-4 h-4 text-primary" />
-                          <span className="text-sm text-muted-foreground">{stat.label}</span>
+                          <span className="text-sm text-muted-foreground">
+                            {stat.label}
+                          </span>
                         </div>
                         <p className="font-display text-2xl font-bold">
-                          {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
+                          {typeof stat.value === "number"
+                            ? stat.value.toLocaleString()
+                            : stat.value}
                         </p>
                       </div>
                     ))}
@@ -244,75 +283,109 @@ export default function ProjectDetail() {
                   <div className="grid md:grid-cols-2 gap-6">
                     {/* Views Chart */}
                     <div className="glass rounded-xl p-6 border border-border/50">
-                      <h3 className="font-display font-semibold mb-4">Views Over Time</h3>
+                      <h3 className="font-display font-semibold mb-4">
+                        Views Over Time
+                      </h3>
                       <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={analytics.dailyViews}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                            <XAxis
-                              dataKey="date"
-                              stroke="hsl(var(--muted-foreground))"
-                              fontSize={12}
-                            />
-                            <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                            <Tooltip
-                              contentStyle={{
-                                background: 'hsl(var(--card))',
-                                border: '1px solid hsl(var(--border))',
-                                borderRadius: '8px',
-                              }}
-                            />
-                            <Line
-                              type="monotone"
-                              dataKey="views"
-                              stroke="hsl(var(--primary))"
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
+                        {analytics?.dailyViews &&
+                        analytics.dailyViews.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={analytics.dailyViews}>
+                              <CartesianGrid
+                                strokeDasharray="3 3"
+                                stroke="hsl(var(--border))"
+                              />
+                              <XAxis
+                                dataKey="date"
+                                stroke="hsl(var(--muted-foreground))"
+                                fontSize={12}
+                              />
+                              <YAxis
+                                stroke="hsl(var(--muted-foreground))"
+                                fontSize={12}
+                              />
+                              <Tooltip
+                                contentStyle={{
+                                  background: "hsl(var(--card))",
+                                  border: "1px solid hsl(var(--border))",
+                                  borderRadius: "8px",
+                                }}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="views"
+                                stroke="hsl(var(--primary))"
+                                strokeWidth={2}
+                                dot={false}
+                              />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-muted-foreground">
+                            <p className="text-sm">No data available yet</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Device Chart */}
                     <div className="glass rounded-xl p-6 border border-border/50">
-                      <h3 className="font-display font-semibold mb-4">Device Breakdown</h3>
+                      <h3 className="font-display font-semibold mb-4">
+                        Device Breakdown
+                      </h3>
                       <div className="h-64">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={deviceData}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={60}
-                              outerRadius={80}
-                              paddingAngle={5}
-                              dataKey="value"
-                            >
+                        {deviceData.length > 0 &&
+                        deviceData.some((d) => d.value > 0) ? (
+                          <>
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={deviceData}
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={60}
+                                  outerRadius={80}
+                                  paddingAngle={5}
+                                  dataKey="value"
+                                >
+                                  {deviceData.map((entry, index) => (
+                                    <Cell
+                                      key={`cell-${index}`}
+                                      fill={COLORS[index % COLORS.length]}
+                                    />
+                                  ))}
+                                </Pie>
+                                <Tooltip
+                                  contentStyle={{
+                                    background: "hsl(var(--card))",
+                                    border: "1px solid hsl(var(--border))",
+                                    borderRadius: "8px",
+                                  }}
+                                />
+                              </PieChart>
+                            </ResponsiveContainer>
+                            <div className="flex justify-center gap-6 mt-4">
                               {deviceData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                <div
+                                  key={entry.name}
+                                  className="flex items-center gap-2"
+                                >
+                                  <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ background: COLORS[index] }}
+                                  />
+                                  <span className="text-sm text-muted-foreground">
+                                    {entry.name}
+                                  </span>
+                                </div>
                               ))}
-                            </Pie>
-                            <Tooltip
-                              contentStyle={{
-                                background: 'hsl(var(--card))',
-                                border: '1px solid hsl(var(--border))',
-                                borderRadius: '8px',
-                              }}
-                            />
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="flex justify-center gap-6 mt-4">
-                          {deviceData.map((entry, index) => (
-                            <div key={entry.name} className="flex items-center gap-2">
-                              <div
-                                className="w-3 h-3 rounded-full"
-                                style={{ background: COLORS[index] }}
-                              />
-                              <span className="text-sm text-muted-foreground">{entry.name}</span>
                             </div>
-                          ))}
-                        </div>
+                          </>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-muted-foreground">
+                            <p className="text-sm">No device data yet</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -334,15 +407,26 @@ export default function ProjectDetail() {
                   <QrCode className="w-32 h-32 text-background" />
                 </div>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Short Code: <span className="font-mono text-foreground">{project.qrCode.shortCode}</span>
+                  Short Code:{" "}
+                  <span className="font-mono text-foreground">
+                    {project.qrCode.shortCode}
+                  </span>
                 </p>
                 <div className="flex gap-2">
-                  <Button variant="glow" className="flex-1" onClick={copyShortCode}>
+                  <Button
+                    variant="glow"
+                    className="flex-1"
+                    onClick={copyShortCode}
+                  >
                     <Copy className="w-4 h-4 mr-2" />
                     Copy Link
                   </Button>
                   <Button variant="glass" size="icon" asChild>
-                    <a href={project.qrCode.url} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={project.qrCode.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <ExternalLink className="w-4 h-4" />
                     </a>
                   </Button>
@@ -354,20 +438,26 @@ export default function ProjectDetail() {
                 <h3 className="font-display font-semibold mb-4">Settings</h3>
                 <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tracking Quality</span>
-                    <span className="capitalize">{project.trackingQuality}</span>
+                    <span className="text-muted-foreground">
+                      Tracking Quality
+                    </span>
+                    <span className="capitalize">
+                      {project.trackingQuality}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Auto Play</span>
-                    <span>{project.autoPlay ? 'Yes' : 'No'}</span>
+                    <span>{project.autoPlay ? "Yes" : "No"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Loop Content</span>
-                    <span>{project.loopContent ? 'Yes' : 'No'}</span>
+                    <span>{project.loopContent ? "Yes" : "No"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Created</span>
-                    <span>{new Date(project.createdAt).toLocaleDateString()}</span>
+                    <span>
+                      {new Date(project.createdAt).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
