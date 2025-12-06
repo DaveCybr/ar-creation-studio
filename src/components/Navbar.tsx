@@ -39,6 +39,9 @@ export function Navbar() {
           <Button variant="ghost" asChild>
             <Link to="/demo">Demo</Link>
           </Button>
+          <Button variant="ghost" asChild>
+            <Link to="/pricing">Pricing</Link>
+          </Button>
           
           {isAuthenticated ? (
             <>
