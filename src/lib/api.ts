@@ -25,6 +25,55 @@ interface User {
   last_login?: string;
 }
 
+// Backend response structure
+interface BackendProject {
+  id: string;
+  userId: string;
+  name: string;
+  description: string;
+  targetImage: {
+    url: string;
+    key: string;
+    hash: string;
+    size: number;
+    width: number | null;
+    height: number | null;
+  };
+  content: {
+    url: string;
+    key: string;
+    type: "image" | "video" | "3d_model";
+    size: number;
+    mimeType: string;
+    duration: number | null;
+    thumbnailUrl: string | null;
+  };
+  settings: {
+    trackingQuality: "low" | "medium" | "high";
+    autoPlay: boolean;
+    loopContent: boolean;
+    contentScale: number;
+  };
+  qrCode: {
+    url: string;
+    shortCode: string;
+    shortUrl: string;
+  };
+  stats: {
+    viewCount: number;
+    scanCount: number;
+    uniqueViewers: number;
+  };
+  status: "active" | "disabled";
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string;
+  lastViewedAt: string | null;
+  expiresAt: string | null;
+}
+
+// Frontend-friendly structure
 interface Project {
   id: string;
   name: string;
@@ -63,7 +112,7 @@ interface ProjectAnalytics {
 interface PresignedUrlResponse {
   uploadUrl: string;
   fileKey: string;
-  expiresIn: number; // ✅ Fixed
+  expiresIn: number;
 }
 
 interface UploadFileResponse {
@@ -85,6 +134,29 @@ class ApiClient {
   constructor() {
     this.accessToken = localStorage.getItem("accessToken");
     this.refreshToken = localStorage.getItem("refreshToken");
+  }
+
+  // Transform backend project to frontend format
+  private transformProject(backendProject: BackendProject): Project {
+    return {
+      id: backendProject.id,
+      name: backendProject.name,
+      description: backendProject.description,
+      targetImageUrl: backendProject.targetImage.url,
+      contentUrl: backendProject.content.url,
+      contentType: backendProject.content.type,
+      status: backendProject.status,
+      viewCount: backendProject.stats.viewCount,
+      qrCode: {
+        shortCode: backendProject.qrCode.shortCode,
+        url: backendProject.qrCode.shortUrl,
+      },
+      trackingQuality: backendProject.settings.trackingQuality,
+      autoPlay: backendProject.settings.autoPlay,
+      loopContent: backendProject.settings.loopContent,
+      createdAt: backendProject.createdAt,
+      updatedAt: backendProject.updatedAt,
+    };
   }
 
   private async request<T>(
@@ -195,7 +267,7 @@ class ApiClient {
     });
   }
 
-  // Upload endpoints - ✅ FIXED
+  // Upload endpoints
   async getPresignedUrl(
     fileType: "target" | "content",
     mimeType: string,
@@ -207,7 +279,6 @@ class ApiClient {
     });
   }
 
-  // ✅ NEW: Upload file dengan FormData
   async uploadFile(
     file: File,
     uploadUrl: string
@@ -220,9 +291,7 @@ class ApiClient {
       headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
-    // ✅ FIX: uploadUrl dari backend adalah path relatif seperti "/api/v1/upload/file?..."
-    // Kita perlu menggabungkan dengan base domain saja (tanpa /api/v1)
-    const baseUrl = BASE_URL.replace(/\/api\/v1$/, ""); // Hapus /api/v1 dari BASE_URL
+    const baseUrl = BASE_URL.replace(/\/api\/v1$/, "");
     const fullUrl = uploadUrl.startsWith("http")
       ? uploadUrl
       : `${baseUrl}${uploadUrl}`;
@@ -271,10 +340,15 @@ class ApiClient {
     autoPlay?: boolean;
     loopContent?: boolean;
   }): Promise<ApiResponse<Project>> {
-    return this.request<Project>("/projects", {
+    const response = await this.request<BackendProject>("/projects", {
       method: "POST",
       body: JSON.stringify(projectData),
     });
+    return {
+      success: response.success,
+      data: this.transformProject(response.data),
+      message: response.message,
+    };
   }
 
   async getProjects(params?: {
@@ -295,13 +369,30 @@ class ApiClient {
       });
     }
     const query = searchParams.toString();
-    return this.request<{ projects: Project[]; total: number }>(
-      `/projects${query ? `?${query}` : ""}`
-    );
+    const response = await this.request<{
+      projects: BackendProject[];
+      pagination: { total: number };
+    }>(`/projects${query ? `?${query}` : ""}`);
+
+    return {
+      success: response.success,
+      data: {
+        projects: response.data.projects.map((p) => this.transformProject(p)),
+        total: response.data.pagination.total,
+      },
+      message: response.message,
+    };
   }
 
   async getProject(projectId: string): Promise<ApiResponse<Project>> {
-    return this.request<Project>(`/projects/${projectId}`);
+    const response = await this.request<BackendProject>(
+      `/projects/${projectId}`
+    );
+    return {
+      success: response.success,
+      data: this.transformProject(response.data),
+      message: response.message,
+    };
   }
 
   async updateProject(
@@ -315,10 +406,18 @@ class ApiClient {
       status: "active" | "disabled";
     }>
   ): Promise<ApiResponse<Project>> {
-    return this.request<Project>(`/projects/${projectId}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
+    const response = await this.request<BackendProject>(
+      `/projects/${projectId}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(updates),
+      }
+    );
+    return {
+      success: response.success,
+      data: this.transformProject(response.data),
+      message: response.message,
+    };
   }
 
   async deleteProject(projectId: string): Promise<ApiResponse<void>> {
@@ -338,6 +437,7 @@ export const api = new ApiClient();
 export type {
   User,
   Project,
+  BackendProject,
   ProjectAnalytics,
   AuthTokens,
   PresignedUrlResponse,
