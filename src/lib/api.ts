@@ -63,7 +63,19 @@ interface ProjectAnalytics {
 interface PresignedUrlResponse {
   uploadUrl: string;
   fileKey: string;
-  expiresAt: string;
+  expiresIn: number; // ✅ Fixed
+}
+
+interface UploadFileResponse {
+  fileKey: string;
+  fileUrl: string;
+  uploaded: boolean;
+}
+
+interface ConfirmUploadResponse {
+  fileKey: string;
+  fileUrl: string;
+  verified: boolean;
 }
 
 class ApiClient {
@@ -170,7 +182,8 @@ class ApiClient {
       body: JSON.stringify({ oldPassword, newPassword }),
     });
   }
-  // Upload endpoints
+
+  // Upload endpoints - ✅ FIXED
   async getPresignedUrl(
     fileType: 'target' | 'content',
     mimeType: string,
@@ -182,8 +195,38 @@ class ApiClient {
     });
   }
 
-  async confirmUpload(fileKey: string): Promise<ApiResponse<void>> {
-    return this.request<void>('/upload/confirm', {
+  // ✅ NEW: Upload file dengan FormData
+  async uploadFile(file: File, uploadUrl: string): Promise<ApiResponse<UploadFileResponse>> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const headers: HeadersInit = {};
+    if (this.accessToken) {
+      headers['Authorization'] = `Bearer ${this.accessToken}`;
+    }
+
+    const response = await fetch(`${BASE_URL}${uploadUrl}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+    });
+
+    if (response.status === 401 && this.refreshToken) {
+      await this.refreshAccessToken();
+      return this.uploadFile(file, uploadUrl);
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Upload failed');
+    }
+
+    return data;
+  }
+
+  async confirmUpload(fileKey: string): Promise<ApiResponse<ConfirmUploadResponse>> {
+    return this.request<ConfirmUploadResponse>('/upload/confirm', {
       method: 'POST',
       body: JSON.stringify({ fileKey }),
     });
@@ -266,4 +309,4 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
-export type { User, Project, ProjectAnalytics, AuthTokens, PresignedUrlResponse };
+export type { User, Project, ProjectAnalytics, AuthTokens, PresignedUrlResponse, UploadFileResponse, ConfirmUploadResponse };
