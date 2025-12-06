@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +23,10 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the return URL from state, default to dashboard
+  const from = (location.state as { from?: string })?.from || '/dashboard';
 
   const {
     register,
@@ -40,7 +44,7 @@ export default function Login() {
         title: 'Login berhasil',
         description: 'Selamat datang kembali!',
       });
-      navigate('/dashboard');
+      navigate(from, { replace: true });
     } catch (error) {
       toast({
         title: 'Login gagal',
