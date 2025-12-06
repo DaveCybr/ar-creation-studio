@@ -31,14 +31,14 @@ interface Project {
   description: string;
   targetImageUrl: string;
   contentUrl: string;
-  contentType: 'image' | 'video' | '3d_model';
-  status: 'active' | 'disabled';
+  contentType: "image" | "video" | "3d_model";
+  status: "active" | "disabled";
   viewCount: number;
   qrCode: {
     shortCode: string;
     url: string;
   };
-  trackingQuality: 'low' | 'medium' | 'high';
+  trackingQuality: "low" | "medium" | "high";
   autoPlay: boolean;
   loopContent: boolean;
   createdAt: string;
@@ -83,8 +83,8 @@ class ApiClient {
   private refreshToken: string | null = null;
 
   constructor() {
-    this.accessToken = localStorage.getItem('accessToken');
-    this.refreshToken = localStorage.getItem('refreshToken');
+    this.accessToken = localStorage.getItem("accessToken");
+    this.refreshToken = localStorage.getItem("refreshToken");
   }
 
   private async request<T>(
@@ -92,12 +92,14 @@ class ApiClient {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     };
 
     if (this.accessToken) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${this.accessToken}`;
+      (headers as Record<string, string>)[
+        "Authorization"
+      ] = `Bearer ${this.accessToken}`;
     }
 
     const response = await fetch(`${BASE_URL}${endpoint}`, {
@@ -113,7 +115,7 @@ class ApiClient {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'An error occurred');
+      throw new Error(data.message || "An error occurred");
     }
 
     return data;
@@ -121,14 +123,14 @@ class ApiClient {
 
   private async refreshAccessToken(): Promise<void> {
     const response = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refreshToken: this.refreshToken }),
     });
 
     if (!response.ok) {
       this.logout();
-      throw new Error('Session expired');
+      throw new Error("Session expired");
     }
 
     const data = await response.json();
@@ -138,15 +140,15 @@ class ApiClient {
   setTokens(accessToken: string, refreshToken: string): void {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
+    localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
   }
 
   logout(): void {
     this.accessToken = null;
     this.refreshToken = null;
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
   }
 
   isAuthenticated(): boolean {
@@ -154,18 +156,25 @@ class ApiClient {
   }
 
   // Auth endpoints
-  async register(email: string, password: string, fullName: string): Promise<ApiResponse<AuthTokens>> {
-    const response = await this.request<AuthTokens>('/auth/register', {
-      method: 'POST',
+  async register(
+    email: string,
+    password: string,
+    fullName: string
+  ): Promise<ApiResponse<AuthTokens>> {
+    const response = await this.request<AuthTokens>("/auth/register", {
+      method: "POST",
       body: JSON.stringify({ email, password, fullName }),
     });
     this.setTokens(response.data.accessToken, response.data.refreshToken);
     return response;
   }
 
-  async login(email: string, password: string): Promise<ApiResponse<AuthTokens>> {
-    const response = await this.request<AuthTokens>('/auth/login', {
-      method: 'POST',
+  async login(
+    email: string,
+    password: string
+  ): Promise<ApiResponse<AuthTokens>> {
+    const response = await this.request<AuthTokens>("/auth/login", {
+      method: "POST",
       body: JSON.stringify({ email, password }),
     });
     this.setTokens(response.data.accessToken, response.data.refreshToken);
@@ -173,40 +182,53 @@ class ApiClient {
   }
 
   async getProfile(): Promise<ApiResponse<User>> {
-    return this.request<User>('/auth/me');
+    return this.request<User>("/auth/me");
   }
 
-  async changePassword(oldPassword: string, newPassword: string): Promise<ApiResponse<void>> {
-    return this.request<void>('/auth/change-password', {
-      method: 'PUT',
+  async changePassword(
+    oldPassword: string,
+    newPassword: string
+  ): Promise<ApiResponse<void>> {
+    return this.request<void>("/auth/change-password", {
+      method: "PUT",
       body: JSON.stringify({ oldPassword, newPassword }),
     });
   }
 
   // Upload endpoints - ✅ FIXED
   async getPresignedUrl(
-    fileType: 'target' | 'content',
+    fileType: "target" | "content",
     mimeType: string,
     fileSize: number
   ): Promise<ApiResponse<PresignedUrlResponse>> {
-    return this.request<PresignedUrlResponse>('/upload/presigned-url', {
-      method: 'POST',
+    return this.request<PresignedUrlResponse>("/upload/presigned-url", {
+      method: "POST",
       body: JSON.stringify({ fileType, mimeType, fileSize }),
     });
   }
 
   // ✅ NEW: Upload file dengan FormData
-  async uploadFile(file: File, uploadUrl: string): Promise<ApiResponse<UploadFileResponse>> {
+  async uploadFile(
+    file: File,
+    uploadUrl: string
+  ): Promise<ApiResponse<UploadFileResponse>> {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append("file", file);
 
     const headers: HeadersInit = {};
     if (this.accessToken) {
-      headers['Authorization'] = `Bearer ${this.accessToken}`;
+      headers["Authorization"] = `Bearer ${this.accessToken}`;
     }
 
-    const response = await fetch(`${BASE_URL}${uploadUrl}`, {
-      method: 'POST',
+    // ✅ FIX: uploadUrl dari backend adalah path relatif seperti "/api/v1/upload/file?..."
+    // Kita perlu menggabungkan dengan base domain saja (tanpa /api/v1)
+    const baseUrl = BASE_URL.replace(/\/api\/v1$/, ""); // Hapus /api/v1 dari BASE_URL
+    const fullUrl = uploadUrl.startsWith("http")
+      ? uploadUrl
+      : `${baseUrl}${uploadUrl}`;
+
+    const response = await fetch(fullUrl, {
+      method: "POST",
       headers,
       body: formData,
     });
@@ -219,15 +241,17 @@ class ApiClient {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.message || 'Upload failed');
+      throw new Error(data.message || "Upload failed");
     }
 
     return data;
   }
 
-  async confirmUpload(fileKey: string): Promise<ApiResponse<ConfirmUploadResponse>> {
-    return this.request<ConfirmUploadResponse>('/upload/confirm', {
-      method: 'POST',
+  async confirmUpload(
+    fileKey: string
+  ): Promise<ApiResponse<ConfirmUploadResponse>> {
+    return this.request<ConfirmUploadResponse>("/upload/confirm", {
+      method: "POST",
       body: JSON.stringify({ fileKey }),
     });
   }
@@ -239,26 +263,26 @@ class ApiClient {
     targetImageKey: string;
     targetImageSize: number;
     contentKey: string;
-    contentType: 'image' | 'video' | '3d_model';
+    contentType: "image" | "video" | "3d_model";
     contentSize: number;
     contentMimeType: string;
     contentDuration?: number;
-    trackingQuality?: 'low' | 'medium' | 'high';
+    trackingQuality?: "low" | "medium" | "high";
     autoPlay?: boolean;
     loopContent?: boolean;
   }): Promise<ApiResponse<Project>> {
-    return this.request<Project>('/projects', {
-      method: 'POST',
+    return this.request<Project>("/projects", {
+      method: "POST",
       body: JSON.stringify(projectData),
     });
   }
 
   async getProjects(params?: {
-    status?: 'active' | 'disabled';
-    contentType?: 'image' | 'video' | '3d_model';
+    status?: "active" | "disabled";
+    contentType?: "image" | "video" | "3d_model";
     search?: string;
-    sortBy?: 'created_at' | 'view_count' | 'name';
-    sortOrder?: 'asc' | 'desc';
+    sortBy?: "created_at" | "view_count" | "name";
+    sortOrder?: "asc" | "desc";
     limit?: number;
     offset?: number;
   }): Promise<ApiResponse<{ projects: Project[]; total: number }>> {
@@ -272,7 +296,7 @@ class ApiClient {
     }
     const query = searchParams.toString();
     return this.request<{ projects: Project[]; total: number }>(
-      `/projects${query ? `?${query}` : ''}`
+      `/projects${query ? `?${query}` : ""}`
     );
   }
 
@@ -285,28 +309,38 @@ class ApiClient {
     updates: Partial<{
       name: string;
       description: string;
-      trackingQuality: 'low' | 'medium' | 'high';
+      trackingQuality: "low" | "medium" | "high";
       autoPlay: boolean;
       loopContent: boolean;
-      status: 'active' | 'disabled';
+      status: "active" | "disabled";
     }>
   ): Promise<ApiResponse<Project>> {
     return this.request<Project>(`/projects/${projectId}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify(updates),
     });
   }
 
   async deleteProject(projectId: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/projects/${projectId}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
-  async getProjectAnalytics(projectId: string): Promise<ApiResponse<ProjectAnalytics>> {
+  async getProjectAnalytics(
+    projectId: string
+  ): Promise<ApiResponse<ProjectAnalytics>> {
     return this.request<ProjectAnalytics>(`/projects/${projectId}/analytics`);
   }
 }
 
 export const api = new ApiClient();
-export type { User, Project, ProjectAnalytics, AuthTokens, PresignedUrlResponse, UploadFileResponse, ConfirmUploadResponse };
+export type {
+  User,
+  Project,
+  ProjectAnalytics,
+  AuthTokens,
+  PresignedUrlResponse,
+  UploadFileResponse,
+  ConfirmUploadResponse,
+};
