@@ -7,7 +7,16 @@ function toAbsoluteUrl(url: string): string {
   if (url.startsWith("http://") || url.startsWith("https://")) {
     return url; // Already absolute
   }
-  return `${BACKEND_BASE}${url}`; // Convert relative to absolute
+
+  // In production, always use backend URL
+  // In development, use relative URL (will be proxied by Vite)
+  const isProduction = import.meta.env.PROD;
+
+  if (isProduction) {
+    return `${BACKEND_BASE}${url}`;
+  }
+
+  return url; // Use relative URL in dev (proxied)
 }
 
 interface ApiResponse<T> {
