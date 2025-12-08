@@ -1,5 +1,4 @@
 // src/pages/ARViewer.tsx
-// WebAR viewer untuk scan & display AR content tanpa app
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,11 +21,44 @@ import {
 
 type ViewerState = "loading" | "permission" | "scanning" | "tracking" | "error";
 
+// Generate session ID untuk tracking
+const generateSessionId = () => {
+  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+};
+
+// Get device info
+const getDeviceInfo = () => {
+  const ua = navigator.userAgent;
+  let osType = "other";
+  let osVersion = "unknown";
+
+  if (/iPad|iPhone|iPod/.test(ua)) {
+    osType = "iOS";
+    const match = ua.match(/OS (\d+)_(\d+)/);
+    if (match) osVersion = `${match[1]}.${match[2]}`;
+  } else if (/Android/.test(ua)) {
+    osType = "Android";
+    const match = ua.match(/Android (\d+\.?\d*)/);
+    if (match) osVersion = match[1];
+  }
+
+  return {
+    osType,
+    osVersion,
+    deviceModel: navigator.platform,
+    userAgent: ua,
+  };
+};
+
 export default function ARViewer() {
   const { shortCode } = useParams<{ shortCode: string }>();
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Session tracking
+  const sessionIdRef = useRef<string>(generateSessionId());
+  const startTimeRef = useRef<number>(0);
 
   const [state, setState] = useState<ViewerState>("loading");
   const [project, setProject] = useState<Project | null>(null);
@@ -42,28 +74,63 @@ export default function ARViewer() {
     if (shortCode) {
       loadProject();
     }
+
+    // Cleanup on unmount
+    return () => {
+      if (project?.id && startTimeRef.current > 0) {
+        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+        trackEvent("ar_end", { trackingDuration: duration });
+      }
+    };
   }, [shortCode]);
 
   const loadProject = async () => {
     try {
-      // In real implementation, fetch by short code
-      // For now, we'll use the ID
-      const response = await api.getProject(shortCode!);
+      setState("loading");
+
+      // Gunakan public endpoint dari API collection
+      const response = await api.getProjectByShortCode(shortCode!);
       setProject(response.data);
       setState("permission");
     } catch (error) {
+      console.error("Load project error:", error);
       toast({
         title: "Error",
-        description: "AR Experience tidak ditemukan",
+        description: "AR Experience tidak ditemukan atau sudah tidak aktif",
         variant: "destructive",
       });
       setState("error");
     }
   };
 
+  const trackEvent = async (
+    eventType: "ar_start" | "ar_end" | "tracking_lost" | "content_interaction",
+    additionalData: Record<string, any> = {}
+  ) => {
+    if (!project?.id) return;
+
+    const deviceInfo = getDeviceInfo();
+
+    try {
+      await api.trackArEvent(project.id, {
+        sessionId: sessionIdRef.current,
+        eventType,
+        deviceModel: deviceInfo.deviceModel,
+        osType: deviceInfo.osType,
+        osVersion: deviceInfo.osVersion,
+        appVersion: "1.0.0",
+        ...additionalData,
+      });
+    } catch (error) {
+      // Silent fail - analytics tidak critical
+      console.log("Track event failed:", error);
+    }
+  };
+
   const startCamera = async () => {
     try {
       setState("loading");
+      startTimeRef.current = Date.now();
 
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -81,6 +148,11 @@ export default function ARViewer() {
       setStream(mediaStream);
       setState("scanning");
 
+      // Track AR start
+      trackEvent("ar_start", {
+        loadDuration: Date.now() - startTimeRef.current,
+      });
+
       // Simulate tracking
       setTimeout(() => {
         setState("tracking");
@@ -94,6 +166,11 @@ export default function ARViewer() {
         variant: "destructive",
       });
       setState("error");
+
+      // Track error
+      trackEvent("ar_end", {
+        error: "camera_permission_denied",
+      });
     }
   };
 
@@ -104,6 +181,12 @@ export default function ARViewer() {
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null;
+    }
+
+    // Track session end
+    if (startTimeRef.current > 0) {
+      const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
+      trackEvent("ar_end", { trackingDuration: duration });
     }
   };
 
@@ -153,7 +236,8 @@ export default function ARViewer() {
             Oops! Something Went Wrong
           </h2>
           <p className="text-muted-foreground mb-6">
-            AR Experience tidak dapat dimuat. Pastikan link Anda benar.
+            AR Experience tidak dapat dimuat. Pastikan link Anda benar dan
+            proyek masih aktif.
           </p>
           <div className="flex gap-3 justify-center">
             <Button variant="outline" onClick={() => navigate("/")}>

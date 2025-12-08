@@ -92,6 +92,26 @@ interface BackendProject {
   expiresAt: string | null;
 }
 
+export type ArEventType =
+  | "ar_start"
+  | "ar_end"
+  | "tracking_lost"
+  | "content_interaction";
+
+export interface ArTrackingData {
+  sessionId: string;
+  eventType: ArEventType;
+  deviceId?: string;
+  loadDuration?: number;
+  trackingDuration?: number;
+  trackingQualityAvg?: number;
+  deviceModel?: string;
+  osType?: string;
+  osVersion?: string;
+  appVersion?: string;
+  error?: string;
+}
+
 // Frontend-friendly structure
 interface Project {
   id: string;
@@ -450,7 +470,118 @@ class ApiClient {
   ): Promise<ApiResponse<ProjectAnalytics>> {
     return this.request<ProjectAnalytics>(`/projects/${projectId}/analytics`);
   }
+
+  async getProjectByShortCode(
+    shortCode: string
+  ): Promise<ApiResponse<Project>> {
+    try {
+      const response = await fetch(`${BASE_URL}/ar/short/${shortCode}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Project not found");
+      }
+
+      return {
+        success: data.success,
+        data: this.transformProject(data.data),
+        message: data.message,
+      };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to load AR project"
+      );
+    }
+  }
+
+  /**
+   * Get project by ID for AR (public endpoint)
+   * Endpoint: GET /ar/:projectId
+   */
+  async getPublicProject(projectId: string): Promise<ApiResponse<Project>> {
+    try {
+      const response = await fetch(`${BASE_URL}/ar/${projectId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Project not found");
+      }
+
+      return {
+        success: data.success,
+        data: this.transformProject(data.data),
+        message: data.message,
+      };
+    } catch (error) {
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to load AR project"
+      );
+    }
+  }
+
+  /**
+   * Track analytics event untuk AR session
+   * Endpoint: POST /ar/:projectId/track
+   */
+  async trackArEvent(
+    projectId: string,
+    eventData: {
+      sessionId: string;
+      eventType:
+        | "ar_start"
+        | "ar_end"
+        | "tracking_lost"
+        | "content_interaction";
+      deviceId?: string;
+      loadDuration?: number;
+      trackingDuration?: number;
+      trackingQualityAvg?: number;
+      deviceModel?: string;
+      osType?: string;
+      osVersion?: string;
+      appVersion?: string;
+      error?: string;
+    }
+  ): Promise<ApiResponse<void>> {
+    try {
+      const response = await fetch(`${BASE_URL}/ar/${projectId}/track`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(eventData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // Silent fail untuk analytics - tidak throw error
+        console.warn("Analytics tracking failed:", data.message);
+        return { success: false, data: undefined };
+      }
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      // Silent fail - analytics tidak critical
+      console.warn("Analytics tracking error:", error);
+      return { success: false, data: undefined };
+    }
+  }
 }
+
+// Export types for analytics
 
 export const api = new ApiClient();
 export type {
