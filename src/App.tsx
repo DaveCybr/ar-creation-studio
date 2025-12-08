@@ -17,6 +17,10 @@ import Profile from "./pages/Profile";
 import Demo from "./pages/Demo";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
+import ARViewer from "./pages/ARViewer";
+import Templates from "./pages/Template";
+import Collections from "./pages/Collections";
+import Analytics from "./pages/Analytics";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -42,6 +46,8 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/demo" element={<Demo />} />
               <Route path="/pricing" element={<Pricing />} />
+              <Route path="/ar/:shortCode" element={<ARViewer />} />
+              <Route path="/templates" element={<Templates />} />
 
               {/* Protected Routes */}
               <Route
@@ -81,6 +87,22 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <EditProject />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/collections"
+                element={
+                  <ProtectedRoute>
+                    <Collections />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
                   </ProtectedRoute>
                 }
               />
