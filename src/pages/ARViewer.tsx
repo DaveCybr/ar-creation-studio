@@ -544,7 +544,7 @@ export default function ARViewer() {
               <div>
                 <p className="text-white/50 mb-1">Views</p>
                 <p className="text-white">
-                  {project.viewCount.toLocaleString() ?? 0} views
+                  {project?.viewCount?.toLocaleString() ?? 0} views
                 </p>
               </div>
             </div>
