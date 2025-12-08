@@ -112,26 +112,26 @@ export default function Index() {
               {/* Main preview card */}
               <div className="glass rounded-2xl p-2 border border-border/50 shadow-2xl">
                 <div className="bg-muted rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
-                  {/* Mock dashboard preview */}
-                  <div className="absolute inset-4 flex gap-4">
-                    <div className="w-64 glass rounded-lg p-4 space-y-3">
-                      <div className="h-4 w-3/4 bg-primary/20 rounded" />
-                      <div className="space-y-2">
+                  {/* Mock dashboard preview - hidden on mobile for cleaner look */}
+                  <div className="absolute inset-2 md:inset-4 flex gap-2 md:gap-4">
+                    <div className="w-32 md:w-64 glass rounded-lg p-2 md:p-4 space-y-2 md:space-y-3 hidden sm:block">
+                      <div className="h-3 md:h-4 w-3/4 bg-primary/20 rounded" />
+                      <div className="space-y-1 md:space-y-2">
                         {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className="h-12 bg-muted-foreground/10 rounded-lg flex items-center gap-2 px-3">
-                            <div className="w-8 h-8 rounded bg-primary/20" />
-                            <div className="flex-1 space-y-1">
-                              <div className="h-2 w-3/4 bg-foreground/20 rounded" />
-                              <div className="h-2 w-1/2 bg-muted-foreground/20 rounded" />
+                          <div key={i} className="h-8 md:h-12 bg-muted-foreground/10 rounded-lg flex items-center gap-1 md:gap-2 px-2 md:px-3">
+                            <div className="w-5 h-5 md:w-8 md:h-8 rounded bg-primary/20" />
+                            <div className="flex-1 space-y-0.5 md:space-y-1">
+                              <div className="h-1.5 md:h-2 w-3/4 bg-foreground/20 rounded" />
+                              <div className="h-1.5 md:h-2 w-1/2 bg-muted-foreground/20 rounded" />
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="flex-1 glass rounded-lg p-4 flex items-center justify-center">
+                    <div className="flex-1 glass rounded-lg p-2 md:p-4 flex items-center justify-center">
                       <div className="text-center">
-                        <Box className="w-16 h-16 text-primary mx-auto mb-4 animate-float" />
-                        <p className="text-muted-foreground">AR Preview Area</p>
+                        <Box className="w-10 h-10 md:w-16 md:h-16 text-primary mx-auto mb-2 md:mb-4 animate-float" />
+                        <p className="text-muted-foreground text-xs md:text-base">AR Preview Area</p>
                       </div>
                     </div>
                   </div>
@@ -142,15 +142,15 @@ export default function Index() {
               <motion.div
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -left-8 top-1/4 glass rounded-xl p-4 border border-primary/30"
+                className="absolute -left-4 lg:-left-8 top-1/4 glass rounded-xl p-3 md:p-4 border border-primary/30 hidden sm:block"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Views Today</p>
-                    <p className="font-display font-bold text-lg">12,847</p>
+                    <p className="font-display font-bold text-base md:text-lg">12,847</p>
                   </div>
                 </div>
               </motion.div>
@@ -158,15 +158,15 @@ export default function Index() {
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute -right-8 bottom-1/4 glass rounded-xl p-4 border border-secondary/30"
+                className="absolute -right-4 lg:-right-8 bottom-1/4 glass rounded-xl p-3 md:p-4 border border-secondary/30 hidden sm:block"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <QrCode className="w-5 h-5 text-secondary" />
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
+                    <QrCode className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Active Projects</p>
-                    <p className="font-display font-bold text-lg">24</p>
+                    <p className="font-display font-bold text-base md:text-lg">24</p>
                   </div>
                 </div>
               </motion.div>

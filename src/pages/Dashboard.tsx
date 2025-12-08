@@ -128,16 +128,16 @@ export default function Dashboard() {
                 />
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <Select
                   value={statusFilter}
                   onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
                 >
-                  <SelectTrigger className="w-36 bg-muted/50 border-border/50">
+                  <SelectTrigger className="w-full sm:w-36 bg-muted/50 border-border/50">
                     <SlidersHorizontal className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-border/50">
+                  <SelectContent className="bg-background border-border">
                     <SelectItem value="all">Semua</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="disabled">Disabled</SelectItem>
@@ -148,17 +148,17 @@ export default function Dashboard() {
                   value={sortBy}
                   onValueChange={(v) => setSortBy(v as typeof sortBy)}
                 >
-                  <SelectTrigger className="w-40 bg-muted/50 border-border/50">
+                  <SelectTrigger className="w-full sm:w-40 bg-muted/50 border-border/50">
                     <SelectValue placeholder="Urutkan" />
                   </SelectTrigger>
-                  <SelectContent className="glass border-border/50">
+                  <SelectContent className="bg-background border-border">
                     <SelectItem value="created_at">Terbaru</SelectItem>
                     <SelectItem value="view_count">Views</SelectItem>
                     <SelectItem value="name">Nama</SelectItem>
                   </SelectContent>
                 </Select>
 
-                <div className="flex items-center glass rounded-lg p-1">
+                <div className="flex items-center justify-center glass rounded-lg p-1">
                   <Button
                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
                     size="icon"
@@ -213,7 +213,7 @@ export default function Dashboard() {
             <div
               className={
                 viewMode === 'grid'
-                  ? 'grid md:grid-cols-2 lg:grid-cols-3 gap-6'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6'
                   : 'space-y-4'
               }
             >
