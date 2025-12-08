@@ -5,19 +5,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GridBackground } from "@/components/GridBackground";
 import { Navbar } from "@/components/Navbar";
+import { QRCodeCard } from "@/components/QrCodeCard";
 import { api, Project, ProjectAnalytics } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Pencil,
-  QrCode,
   Eye,
   Video,
   Image,
   Box,
   Loader2,
-  Copy,
-  ExternalLink,
   TrendingUp,
   Users,
   Clock,
@@ -77,16 +75,6 @@ export default function ProjectDetail() {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const copyShortCode = () => {
-    if (project?.qrCode.url) {
-      navigator.clipboard.writeText(project.qrCode.url);
-      toast({
-        title: "Berhasil",
-        description: "Link telah disalin",
-      });
     }
   };
 
@@ -401,37 +389,11 @@ export default function ProjectDetail() {
               className="space-y-6"
             >
               {/* QR Code */}
-              <div className="glass rounded-xl p-6 border border-border/50 text-center">
-                <h3 className="font-display font-semibold mb-4">QR Code</h3>
-                <div className="w-48 h-48 mx-auto mb-4 bg-foreground rounded-xl flex items-center justify-center">
-                  <QrCode className="w-32 h-32 text-background" />
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Short Code:{" "}
-                  <span className="font-mono text-foreground">
-                    {project.qrCode.shortCode}
-                  </span>
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="glow"
-                    className="flex-1"
-                    onClick={copyShortCode}
-                  >
-                    <Copy className="w-4 h-4 mr-2" />
-                    Copy Link
-                  </Button>
-                  <Button variant="glass" size="icon" asChild>
-                    <a
-                      href={project.qrCode.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
+              <QRCodeCard
+                url={project.qrCode.url}
+                shortCode={project.qrCode.shortCode}
+                projectName={project.name}
+              />
 
               {/* Settings */}
               <div className="glass rounded-xl p-6 border border-border/50">
