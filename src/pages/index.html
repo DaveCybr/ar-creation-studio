@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR Marker - Video Player</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        overflow: hidden;
+      }
+
+      #overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+        color: white;
+        transition: opacity 0.5s;
+      }
+
+      #overlay.hidden {
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      #overlay h1 {
+        font-size: 2.5em;
+        margin-bottom: 20px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+
+      #overlay p {
+        font-size: 1.2em;
+        margin-bottom: 30px;
+        text-align: center;
+        padding: 0 20px;
+        max-width: 600px;
+      }
+
+      #startBtn {
+        padding: 15px 40px;
+        font-size: 1.2em;
+        background: white;
+        color: #667eea;
+        border: none;
+        border-radius: 50px;
+        cursor: pointer;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+
+      #startBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      #startBtn:active {
+        transform: translateY(0);
+      }
+
+      .marker-icon {
+        width: 100px;
+        height: 100px;
+        margin-bottom: 20px;
+        background: white;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      #info {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 25px;
+        font-size: 1em;
+        z-index: 100;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        max-width: 90%;
+      }
+
+      #controls {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        gap: 15px;
+        z-index: 100;
+      }
+
+      #controls.active {
+        display: flex;
+      }
+
+      .control-btn {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5em;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        transition: transform 0.2s, background 0.2s;
+      }
+
+      .control-btn:hover {
+        transform: scale(1.1);
+        background: white;
+      }
+
+      .control-btn:active {
+        transform: scale(0.95);
+      }
+
+      .instructions {
+        margin-top: 20px;
+        font-size: 0.9em;
+        opacity: 0.9;
+      }
+
+      .loading {
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="overlay">
+      <div class="marker-icon">
+        <svg
+          viewBox="0 0 100 100"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect x="10" y="10" width="80" height="80" fill="#667eea" rx="5" />
+          <rect x="20" y="20" width="20" height="20" fill="white" />
+          <rect x="60" y="20" width="20" height="20" fill="white" />
+          <rect x="20" y="60" width="20" height="20" fill="white" />
+          <rect x="60" y="60" width="20" height="20" fill="white" />
+        </svg>
+      </div>
+      <h1>🎥 AR Video Player</h1>
+      <p>
+        Arahkan kamera ke marker Hiro untuk memutar video dalam Augmented
+        Reality
+      </p>
+      <button id="startBtn">Mulai AR</button>
+      <div class="instructions">
+        Download marker Hiro:
+        <a
+          href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+          target="_blank"
+          style="color: white; text-decoration: underline"
+          >klik di sini</a
+        >
+      </div>
+    </div>
+
+    <div id="info">
+      <span class="loading">Mencari marker...</span>
+    </div>
+
+    <div id="controls">
+      <button class="control-btn" id="playPauseBtn" title="Play/Pause">
+        ▶
+      </button>
+      <button class="control-btn" id="muteBtn" title="Mute/Unmute">🔊</button>
+      <button class="control-btn" id="restartBtn" title="Restart">↻</button>
+    </div>
+
+    <a-scene
+      embedded
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+      vr-mode-ui="enabled: false"
+    >
+      <!-- Aset Video -->
+      <a-assets>
+        <video
+          id="video"
+          autoplay
+          loop
+          crossorigin="anonymous"
+          playsinline
+          webkit-playsinline
+        ></video>
+      </a-assets>
+
+      <!-- Marker Hiro -->
+      <a-marker
+        preset="hiro"
+        id="marker"
+        emitevents="true"
+        smooth="true"
+        smoothCount="5"
+        smoothTolerance="0.01"
+        smoothThreshold="2"
+      >
+        <!-- Video plane dengan material -->
+        <a-plane
+          id="videoPlane"
+          width="1.6"
+          height="0.9"
+          position="0 0.5 0"
+          rotation="-90 0 0"
+          material="shader: flat; src: #video; side: double"
+        ></a-plane>
+
+        <!-- Frame border -->
+        <a-ring
+          position="0 0.5 0.01"
+          rotation="-90 0 0"
+          radius-inner="0.75"
+          radius-outer="0.85"
+          color="#FFD700"
+        ></a-ring>
+
+        <!-- Shadow/base -->
+        <a-plane
+          position="0 0.5 -0.02"
+          rotation="-90 0 0"
+          width="1.8"
+          height="1.1"
+          color="#000000"
+          opacity="0.8"
+        ></a-plane>
+      </a-marker>
+
+      <!-- Kamera -->
+      <a-entity camera></a-entity>
+    </a-scene>
+
+    <script>
+      let video;
+      let marker;
+      let videoPlane;
+      let isPlaying = false;
+      let isMuted = true;
+      let videoLoaded = false;
+      const info = document.getElementById("info");
+      const controls = document.getElementById("controls");
+      const playPauseBtn = document.getElementById("playPauseBtn");
+      const muteBtn = document.getElementById("muteBtn");
+      const restartBtn = document.getElementById("restartBtn");
+
+      // Video sources - akan dicoba satu per satu
+      const videoSources = [
+        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+        "https://www.w3schools.com/html/mov_bbb.mp4",
+        "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
+      ];
+
+      let currentSourceIndex = 0;
+
+      function loadVideo() {
+        video = document.getElementById("video");
+
+        video.onerror = function () {
+          console.error(
+            "Error loading video from:",
+            videoSources[currentSourceIndex]
+          );
+          currentSourceIndex++;
+          if (currentSourceIndex < videoSources.length) {
+            console.log("Trying next video source...");
+            video.src = videoSources[currentSourceIndex];
+            video.load();
+          } else {
+            info.innerHTML = "⚠ Error loading video";
+            info.style.background = "rgba(200,100,0,0.7)";
+          }
+        };
+
+        video.onloadeddata = function () {
+          console.log("Video loaded successfully!");
+          videoLoaded = true;
+          video.muted = true;
+        };
+
+        video.oncanplay = function () {
+          console.log("Video can play");
+        };
+
+        // Set first video source
+        video.src = videoSources[currentSourceIndex];
+        video.load();
+      }
+
+      document
+        .getElementById("startBtn")
+        .addEventListener("click", function () {
+          document.getElementById("overlay").classList.add("hidden");
+
+          setTimeout(() => {
+            marker = document.getElementById("marker");
+            videoPlane = document.getElementById("videoPlane");
+
+            loadVideo();
+
+            if (!marker) {
+              console.error("Marker tidak ditemukan");
+              return;
+            }
+
+            // Event ketika marker ditemukan
+            marker.addEventListener("markerFound", function () {
+              console.log("Marker found!");
+              info.innerHTML = "✓ Marker terdeteksi - Video playing";
+              info.style.background = "rgba(0,200,0,0.7)";
+              controls.classList.add("active");
+
+              if (videoLoaded) {
+                video
+                  .play()
+                  .then(() => {
+                    isPlaying = true;
+                    playPauseBtn.innerHTML = "⏸";
+                    console.log("Video playing");
+
+                    // Update material texture
+                    if (videoPlane) {
+                      videoPlane.setAttribute("material", "src", "#video");
+                    }
+                  })
+                  .catch((err) => {
+                    console.error("Play error:", err);
+                    info.innerHTML = "✓ Marker terdeteksi - Tekan play";
+                  });
+              } else {
+                console.log("Video not loaded yet");
+                info.innerHTML = "⏳ Loading video...";
+              }
+            });
+
+            // Event ketika marker hilang
+            marker.addEventListener("markerLost", function () {
+              console.log("Marker lost!");
+              info.innerHTML = "✗ Marker hilang - Cari marker lagi";
+              info.style.background = "rgba(200,0,0,0.7)";
+              // Jangan hide controls, biarkan user bisa kontrol
+            });
+          }, 500);
+        });
+
+      // Kontrol Play/Pause
+      playPauseBtn.addEventListener("click", function () {
+        if (video) {
+          if (isPlaying) {
+            video.pause();
+            playPauseBtn.innerHTML = "▶";
+          } else {
+            video
+              .play()
+              .then(() => {
+                playPauseBtn.innerHTML = "⏸";
+              })
+              .catch((err) => console.error("Play error:", err));
+          }
+          isPlaying = !isPlaying;
+        }
+      });
+
+      // Kontrol Mute/Unmute
+      muteBtn.addEventListener("click", function () {
+        if (video) {
+          video.muted = !video.muted;
+          isMuted = video.muted;
+          muteBtn.innerHTML = isMuted ? "🔊" : "🔇";
+        }
+      });
+
+      // Kontrol Restart
+      restartBtn.addEventListener("click", function () {
+        if (video) {
+          video.currentTime = 0;
+          video
+            .play()
+            .then(() => {
+              isPlaying = true;
+              playPauseBtn.innerHTML = "⏸";
+            })
+            .catch((err) => console.error("Restart error:", err));
+        }
+      });
+    </script>
+  </body>
+</html>
