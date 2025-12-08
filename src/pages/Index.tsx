@@ -54,7 +54,7 @@ export default function Index() {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-4">
+      <section className="relative pt-24 md:pt-32 pb-12 md:pb-20 px-4">
         <div className="container mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -66,35 +66,35 @@ export default function Index() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30 mb-8"
+              className="inline-flex items-center gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-full glass border border-primary/30 mb-6 md:mb-8"
             >
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs md:text-sm text-muted-foreground">
                 Platform AR Generasi Berikutnya
               </span>
             </motion.div>
 
-            <h1 className="font-display text-5xl md:text-7xl font-bold mb-6 leading-tight">
+            <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 md:mb-6 leading-tight px-2">
               Buat Pengalaman{' '}
               <span className="gradient-text">Augmented Reality</span>{' '}
               yang Menakjubkan
             </h1>
 
-            <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
+            <p className="text-base md:text-xl text-muted-foreground mb-8 md:mb-10 max-w-2xl mx-auto px-2">
               Platform lengkap untuk membuat, mengelola, dan membagikan konten AR. 
               Upload target image, tambahkan konten multimedia, dan bagikan melalui QR code.
             </p>
 
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button variant="hero" size="xl" asChild>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 md:gap-4 px-4">
+              <Button variant="hero" size="lg" className="w-full sm:w-auto text-base md:text-lg px-6 md:px-8 py-5 md:py-6" asChild>
                 <Link to="/register">
                   Mulai Gratis
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2" />
                 </Link>
               </Button>
-              <Button variant="glass" size="xl" asChild>
+              <Button variant="glass" size="lg" className="w-full sm:w-auto text-base md:text-lg px-6 md:px-8 py-5 md:py-6" asChild>
                 <Link to="/demo">
-                  <Play className="w-5 h-5 mr-2" />
+                  <Play className="w-4 h-4 md:w-5 md:h-5 mr-2" />
                   Lihat Demo
                 </Link>
               </Button>
@@ -112,26 +112,26 @@ export default function Index() {
               {/* Main preview card */}
               <div className="glass rounded-2xl p-2 border border-border/50 shadow-2xl">
                 <div className="bg-muted rounded-xl aspect-video flex items-center justify-center relative overflow-hidden">
-                  {/* Mock dashboard preview */}
-                  <div className="absolute inset-4 flex gap-4">
-                    <div className="w-64 glass rounded-lg p-4 space-y-3">
-                      <div className="h-4 w-3/4 bg-primary/20 rounded" />
-                      <div className="space-y-2">
+                  {/* Mock dashboard preview - hidden on mobile for cleaner look */}
+                  <div className="absolute inset-2 md:inset-4 flex gap-2 md:gap-4">
+                    <div className="w-32 md:w-64 glass rounded-lg p-2 md:p-4 space-y-2 md:space-y-3 hidden sm:block">
+                      <div className="h-3 md:h-4 w-3/4 bg-primary/20 rounded" />
+                      <div className="space-y-1 md:space-y-2">
                         {[1, 2, 3, 4].map((i) => (
-                          <div key={i} className="h-12 bg-muted-foreground/10 rounded-lg flex items-center gap-2 px-3">
-                            <div className="w-8 h-8 rounded bg-primary/20" />
-                            <div className="flex-1 space-y-1">
-                              <div className="h-2 w-3/4 bg-foreground/20 rounded" />
-                              <div className="h-2 w-1/2 bg-muted-foreground/20 rounded" />
+                          <div key={i} className="h-8 md:h-12 bg-muted-foreground/10 rounded-lg flex items-center gap-1 md:gap-2 px-2 md:px-3">
+                            <div className="w-5 h-5 md:w-8 md:h-8 rounded bg-primary/20" />
+                            <div className="flex-1 space-y-0.5 md:space-y-1">
+                              <div className="h-1.5 md:h-2 w-3/4 bg-foreground/20 rounded" />
+                              <div className="h-1.5 md:h-2 w-1/2 bg-muted-foreground/20 rounded" />
                             </div>
                           </div>
                         ))}
                       </div>
                     </div>
-                    <div className="flex-1 glass rounded-lg p-4 flex items-center justify-center">
+                    <div className="flex-1 glass rounded-lg p-2 md:p-4 flex items-center justify-center">
                       <div className="text-center">
-                        <Box className="w-16 h-16 text-primary mx-auto mb-4 animate-float" />
-                        <p className="text-muted-foreground">AR Preview Area</p>
+                        <Box className="w-10 h-10 md:w-16 md:h-16 text-primary mx-auto mb-2 md:mb-4 animate-float" />
+                        <p className="text-muted-foreground text-xs md:text-base">AR Preview Area</p>
                       </div>
                     </div>
                   </div>
@@ -142,15 +142,15 @@ export default function Index() {
               <motion.div
                 animate={{ y: [0, -10, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute -left-8 top-1/4 glass rounded-xl p-4 border border-primary/30"
+                className="absolute -left-4 lg:-left-8 top-1/4 glass rounded-xl p-3 md:p-4 border border-primary/30 hidden sm:block"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <BarChart3 className="w-5 h-5 text-primary" />
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Views Today</p>
-                    <p className="font-display font-bold text-lg">12,847</p>
+                    <p className="font-display font-bold text-base md:text-lg">12,847</p>
                   </div>
                 </div>
               </motion.div>
@@ -158,15 +158,15 @@ export default function Index() {
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 5, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute -right-8 bottom-1/4 glass rounded-xl p-4 border border-secondary/30"
+                className="absolute -right-4 lg:-right-8 bottom-1/4 glass rounded-xl p-3 md:p-4 border border-secondary/30 hidden sm:block"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
-                    <QrCode className="w-5 h-5 text-secondary" />
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-secondary/20 flex items-center justify-center">
+                    <QrCode className="w-4 h-4 md:w-5 md:h-5 text-secondary" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Active Projects</p>
-                    <p className="font-display font-bold text-lg">24</p>
+                    <p className="font-display font-bold text-base md:text-lg">24</p>
                   </div>
                 </div>
               </motion.div>
@@ -176,24 +176,24 @@ export default function Index() {
       </section>
 
       {/* Features Section */}
-      <section className="relative py-20 px-4">
+      <section className="relative py-12 md:py-20 px-4">
         <div className="container mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="text-center mb-16"
+            className="text-center mb-10 md:mb-16"
           >
-            <h2 className="font-display text-3xl md:text-5xl font-bold mb-4">
+            <h2 className="font-display text-2xl sm:text-3xl md:text-5xl font-bold mb-3 md:mb-4">
               Fitur <span className="gradient-text">Lengkap</span>
             </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-sm md:text-lg max-w-2xl mx-auto px-2">
               Semua yang Anda butuhkan untuk membuat dan mengelola pengalaman AR profesional
             </p>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {features.map((feature, index) => (
               <motion.div
                 key={feature.title}
@@ -201,13 +201,13 @@ export default function Index() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: index * 0.1 }}
-                className="group glass rounded-xl p-6 border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(187_100%_50%/0.1)]"
+                className="group glass rounded-xl p-4 md:p-6 border border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-[0_0_30px_hsl(187_100%_50%/0.1)]"
               >
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="w-6 h-6 text-primary" />
+                <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mb-3 md:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <feature.icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                 </div>
-                <h3 className="font-display font-semibold text-lg mb-2">{feature.title}</h3>
-                <p className="text-muted-foreground text-sm">{feature.description}</p>
+                <h3 className="font-display font-semibold text-base md:text-lg mb-1 md:mb-2">{feature.title}</h3>
+                <p className="text-muted-foreground text-xs md:text-sm">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -215,29 +215,29 @@ export default function Index() {
       </section>
 
       {/* CTA Section */}
-      <section className="relative py-20 px-4">
+      <section className="relative py-12 md:py-20 px-4">
         <div className="container mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="relative glass rounded-3xl p-12 text-center overflow-hidden border border-border/50"
+            className="relative glass rounded-2xl md:rounded-3xl p-6 md:p-12 text-center overflow-hidden border border-border/50"
           >
             {/* Background glow */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-primary/5" />
             
             <div className="relative z-10">
-              <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              <h2 className="font-display text-xl sm:text-2xl md:text-4xl font-bold mb-3 md:mb-4">
                 Siap Membuat Pengalaman AR?
               </h2>
-              <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
+              <p className="text-muted-foreground text-sm md:text-lg mb-6 md:mb-8 max-w-xl mx-auto">
                 Mulai gratis hari ini. Tidak perlu kartu kredit.
               </p>
-              <Button variant="hero" size="xl" asChild>
+              <Button variant="hero" size="lg" className="w-full sm:w-auto text-base md:text-lg px-6 md:px-8 py-5 md:py-6" asChild>
                 <Link to="/register">
                   Mulai Sekarang
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-4 h-4 md:w-5 md:h-5 ml-2" />
                 </Link>
               </Button>
             </div>
