@@ -1,193 +1,203 @@
-// src/pages/ARViewer.tsx
 import { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { api, Project } from "@/lib/api";
-import { toast } from "@/hooks/use-toast";
 import {
   Camera,
   Loader2,
   AlertCircle,
-  RefreshCcw,
-  Maximize2,
-  Volume2,
-  VolumeX,
   Info,
   X,
-  ScanLine,
+  Volume2,
+  VolumeX,
+  Maximize2,
   Check,
 } from "lucide-react";
 
+// Mock project data untuk demo
+const MOCK_PROJECT = {
+  id: "1",
+  name: "Demo AR Project",
+  description: "Scan marker untuk melihat konten AR",
+  targetImageUrl:
+    "https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png",
+  contentUrl: "https://cdn.aframe.io/a-painter/images/a-painter-logo.png",
+  contentType: "image",
+  autoPlay: true,
+  loopContent: true,
+  trackingQuality: "medium",
+};
+
 type ViewerState = "loading" | "permission" | "scanning" | "tracking" | "error";
 
-// Generate session ID untuk tracking
-const generateSessionId = () => {
-  return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-};
-
-// Get device info
-const getDeviceInfo = () => {
-  const ua = navigator.userAgent;
-  let osType = "other";
-  let osVersion = "unknown";
-
-  if (/iPad|iPhone|iPod/.test(ua)) {
-    osType = "iOS";
-    const match = ua.match(/OS (\d+)_(\d+)/);
-    if (match) osVersion = `${match[1]}.${match[2]}`;
-  } else if (/Android/.test(ua)) {
-    osType = "Android";
-    const match = ua.match(/Android (\d+\.?\d*)/);
-    if (match) osVersion = match[1];
-  }
-
-  return {
-    osType,
-    osVersion,
-    deviceModel: navigator.platform,
-    userAgent: ua,
-  };
-};
-
 export default function ARViewer() {
-  const { shortCode } = useParams<{ shortCode: string }>();
-  const navigate = useNavigate();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // Session tracking
-  const sessionIdRef = useRef<string>(generateSessionId());
-  const startTimeRef = useRef<number>(0);
-
   const [state, setState] = useState<ViewerState>("loading");
-  const [project, setProject] = useState<Project | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [project] = useState(MOCK_PROJECT);
   const [isMuted, setIsMuted] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
-  const [trackingQuality, setTrackingQuality] = useState<
-    "excellent" | "good" | "poor"
-  >("good");
+  const [error, setError] = useState<string>("");
+  const [isTracking, setIsTracking] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const sceneRef = useRef<any>(null);
 
   useEffect(() => {
-    if (shortCode) {
-      loadProject();
-    }
+    // Load A-Frame and AR.js
+    const loadScripts = async () => {
+      try {
+        // Load A-Frame
+        if (!document.getElementById("aframe-script")) {
+          const aframeScript = document.createElement("script");
+          aframeScript.id = "aframe-script";
+          aframeScript.src = "https://aframe.io/releases/1.4.2/aframe.min.js";
+          document.head.appendChild(aframeScript);
 
-    // Cleanup on unmount
-    return () => {
-      if (project?.id && startTimeRef.current > 0) {
-        const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-        trackEvent("ar_end", { trackingDuration: duration });
+          await new Promise((resolve) => {
+            aframeScript.onload = resolve;
+          });
+        }
+
+        // Load AR.js
+        if (!document.getElementById("arjs-script")) {
+          const arjsScript = document.createElement("script");
+          arjsScript.id = "arjs-script";
+          arjsScript.src =
+            "https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js";
+          document.head.appendChild(arjsScript);
+
+          await new Promise((resolve) => {
+            arjsScript.onload = resolve;
+          });
+        }
+
+        // Small delay to ensure AR.js is fully initialized
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        setState("permission");
+      } catch (err) {
+        console.error("Failed to load AR libraries:", err);
+        setError("Gagal memuat library AR");
+        setState("error");
       }
     };
-  }, [shortCode]);
 
-  const loadProject = async () => {
-    try {
-      setState("loading");
+    loadScripts();
 
-      // Gunakan public endpoint dari API collection
-      const response = await api.getProjectByShortCode(shortCode!);
-      setProject(response.data);
-      setState("permission");
-    } catch (error) {
-      console.error("Load project error:", error);
-      toast({
-        title: "Error",
-        description: "AR Experience tidak ditemukan atau sudah tidak aktif",
-        variant: "destructive",
-      });
-      setState("error");
-    }
-  };
-
-  const trackEvent = async (
-    eventType: "ar_start" | "ar_end" | "tracking_lost" | "content_interaction",
-    additionalData: Record<string, any> = {}
-  ) => {
-    if (!project?.id) return;
-
-    const deviceInfo = getDeviceInfo();
-
-    try {
-      await api.trackArEvent(project.id, {
-        sessionId: sessionIdRef.current,
-        eventType,
-        deviceModel: deviceInfo.deviceModel,
-        osType: deviceInfo.osType,
-        osVersion: deviceInfo.osVersion,
-        appVersion: "1.0.0",
-        ...additionalData,
-      });
-    } catch (error) {
-      // Silent fail - analytics tidak critical
-      console.log("Track event failed:", error);
-    }
-  };
-
-  const startCamera = async () => {
-    try {
-      setState("loading");
-      startTimeRef.current = Date.now();
-
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "environment",
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-      });
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-        await videoRef.current.play();
+    return () => {
+      // Cleanup
+      if (sceneRef.current) {
+        const scene = sceneRef.current;
+        if (scene.renderer) {
+          scene.renderer.dispose();
+        }
       }
+    };
+  }, []);
 
-      setStream(mediaStream);
+  const startAR = () => {
+    setState("loading");
+
+    // Small delay to show loading
+    setTimeout(() => {
       setState("scanning");
-
-      // Track AR start
-      trackEvent("ar_start", {
-        loadDuration: Date.now() - startTimeRef.current,
-      });
-
-      // Simulate tracking
-      setTimeout(() => {
-        setState("tracking");
-      }, 2000);
-    } catch (error) {
-      console.error("Camera error:", error);
-      toast({
-        title: "Camera Error",
-        description:
-          "Tidak dapat mengakses kamera. Pastikan izin kamera diberikan.",
-        variant: "destructive",
-      });
-      setState("error");
-
-      // Track error
-      trackEvent("ar_end", {
-        error: "camera_permission_denied",
-      });
-    }
+      initializeAR();
+    }, 500);
   };
 
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach((track) => track.stop());
-      setStream(null);
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
+  const initializeAR = () => {
+    if (!containerRef.current) return;
+
+    // Create A-Frame scene
+    const scene = document.createElement("a-scene");
+    scene.setAttribute("embedded", "");
+    scene.setAttribute(
+      "arjs",
+      "sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+    );
+    scene.setAttribute("vr-mode-ui", "enabled: false");
+    scene.style.width = "100%";
+    scene.style.height = "100%";
+
+    // Create marker
+    const marker = document.createElement("a-marker");
+    marker.setAttribute("preset", "hiro");
+    marker.setAttribute("emitevents", "true");
+    marker.setAttribute("id", "marker");
+
+    // Create content based on type
+    let content;
+    if (project.contentType === "image") {
+      // Create image content
+      content = document.createElement("a-image");
+      content.setAttribute("src", project.contentUrl);
+      content.setAttribute("rotation", "-90 0 0");
+      content.setAttribute("width", "2");
+      content.setAttribute("height", "2");
+      content.setAttribute("position", "0 0 0");
+    } else if (project.contentType === "video") {
+      // Create video asset
+      const assets = document.createElement("a-assets");
+      const video = document.createElement("video");
+      video.id = "ar-video";
+      video.src = project.contentUrl;
+      video.setAttribute("crossorigin", "anonymous");
+      video.loop = project.loopContent;
+      video.muted = isMuted;
+      if (project.autoPlay) {
+        video.setAttribute("autoplay", "");
+      }
+      assets.appendChild(video);
+      scene.appendChild(assets);
+
+      // Create video content
+      content = document.createElement("a-video");
+      content.setAttribute("src", "#ar-video");
+      content.setAttribute("rotation", "-90 0 0");
+      content.setAttribute("width", "2");
+      content.setAttribute("height", "2");
+      content.setAttribute("position", "0 0 0");
+    } else {
+      // Default to plane for 3D models
+      content = document.createElement("a-box");
+      content.setAttribute("position", "0 0.5 0");
+      content.setAttribute("color", "#00D4FF");
+      content.setAttribute(
+        "animation",
+        "property: rotation; to: 0 360 0; loop: true; dur: 10000"
+      );
     }
 
-    // Track session end
-    if (startTimeRef.current > 0) {
-      const duration = Math.floor((Date.now() - startTimeRef.current) / 1000);
-      trackEvent("ar_end", { trackingDuration: duration });
-    }
+    marker.appendChild(content);
+
+    // Add camera
+    const camera = document.createElement("a-entity");
+    camera.setAttribute("camera", "");
+    scene.appendChild(camera);
+
+    // Add marker to scene
+    scene.appendChild(marker);
+
+    // Clear container and add scene
+    containerRef.current.innerHTML = "";
+    containerRef.current.appendChild(scene);
+    sceneRef.current = scene;
+
+    // Listen for marker events
+    marker.addEventListener("markerFound", () => {
+      console.log("Marker found!");
+      setIsTracking(true);
+      setState("tracking");
+    });
+
+    marker.addEventListener("markerLost", () => {
+      console.log("Marker lost!");
+      setIsTracking(false);
+      setState("scanning");
+    });
+
+    // Error handling
+    scene.addEventListener("camera-error", (err: any) => {
+      console.error("Camera error:", err);
+      setError("Gagal mengakses kamera");
+      setState("error");
+    });
   };
 
   const toggleFullscreen = () => {
@@ -200,376 +210,260 @@ export default function ARViewer() {
     }
   };
 
-  const handleRetry = () => {
-    setState("permission");
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+    const video = document.getElementById("ar-video") as HTMLVideoElement;
+    if (video) {
+      video.muted = !isMuted;
+    }
   };
 
-  useEffect(() => {
-    return () => {
-      stopCamera();
-    };
-  }, []);
+  const handleBack = () => {
+    // In real app, use navigate(-1)
+    window.history.back();
+  };
 
   if (state === "loading") {
     return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading AR Experience...</p>
+      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center">
+        <div className="text-center text-white">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <p>Loading AR Experience...</p>
         </div>
       </div>
     );
   }
 
-  if (state === "error" || !project) {
+  if (state === "error") {
     return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center max-w-md"
-        >
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-destructive/10 flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-destructive" />
-          </div>
-          <h2 className="font-display text-2xl font-bold mb-2">
-            Oops! Something Went Wrong
-          </h2>
-          <p className="text-muted-foreground mb-6">
-            AR Experience tidak dapat dimuat. Pastikan link Anda benar dan
-            proyek masih aktif.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Button variant="outline" onClick={() => navigate("/")}>
-              Go Home
-            </Button>
-            <Button variant="hero" onClick={handleRetry}>
-              <RefreshCcw className="w-4 h-4 mr-2" />
-              Try Again
-            </Button>
-          </div>
-        </motion.div>
+      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center p-4">
+        <div className="max-w-md text-center text-white">
+          <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h2 className="text-2xl font-bold mb-2">Error</h2>
+          <p className="mb-6">{error || "Terjadi kesalahan saat memuat AR"}</p>
+          <button
+            onClick={handleBack}
+            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition"
+          >
+            Kembali
+          </button>
+        </div>
       </div>
     );
   }
 
   if (state === "permission") {
     return (
-      <div className="fixed inset-0 bg-background flex items-center justify-center p-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center max-w-md"
-        >
+      <div className="fixed inset-0 bg-gray-900 flex items-center justify-center p-4">
+        <div className="max-w-md text-center text-white">
           {/* Preview */}
           <div className="mb-6 relative">
-            <div className="aspect-video rounded-2xl overflow-hidden border-2 border-border/50 bg-muted">
-              {project.targetImageUrl ? (
-                <img
-                  src={project.targetImageUrl}
-                  alt={project.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Camera className="w-16 h-16 text-muted-foreground" />
-                </div>
-              )}
+            <div className="aspect-video rounded-2xl overflow-hidden border-2 border-gray-700 bg-gray-800">
+              <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                <Camera className="w-16 h-16 mb-4 text-blue-400" />
+                <p className="text-sm text-gray-400">
+                  Scan HIRO marker untuk demo
+                </p>
+                <a
+                  href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-2 text-xs text-blue-400 underline"
+                >
+                  Download marker →
+                </a>
+              </div>
             </div>
-            <motion.div
-              animate={{ scale: [1, 1.1, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              className="absolute -top-2 -right-2 w-12 h-12 rounded-full bg-primary/20 border-2 border-primary flex items-center justify-center"
-            >
-              <Camera className="w-6 h-6 text-primary" />
-            </motion.div>
           </div>
 
           {/* Info */}
-          <h1 className="font-display text-2xl font-bold mb-2">
-            {project.name}
-          </h1>
+          <h1 className="text-2xl font-bold mb-2">{project.name}</h1>
           {project.description && (
-            <p className="text-muted-foreground mb-6">{project.description}</p>
+            <p className="text-gray-400 mb-6">{project.description}</p>
           )}
 
           {/* Instructions */}
-          <div className="glass rounded-xl p-4 mb-6 border border-border/50 text-left">
+          <div className="bg-gray-800 rounded-xl p-4 mb-6 text-left border border-gray-700">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Info className="w-4 h-4 text-primary" />
+              <Info className="w-4 h-4 text-blue-400" />
               Cara Menggunakan
             </h3>
-            <ol className="space-y-2 text-sm text-muted-foreground">
+            <ol className="space-y-2 text-sm text-gray-400">
               <li className="flex gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
                   1
                 </span>
-                <span>Izinkan akses kamera pada browser</span>
+                <span>Download dan print HIRO marker</span>
               </li>
               <li className="flex gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
                   2
                 </span>
-                <span>Arahkan kamera ke target image di atas</span>
+                <span>Izinkan akses kamera</span>
               </li>
               <li className="flex gap-2">
-                <span className="w-5 h-5 rounded-full bg-primary/20 text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                <span className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
                   3
                 </span>
-                <span>Nikmati pengalaman AR Anda!</span>
+                <span>Arahkan kamera ke marker</span>
               </li>
             </ol>
           </div>
 
           {/* Start Button */}
-          <Button
-            variant="hero"
-            size="lg"
-            className="w-full"
-            onClick={startCamera}
+          <button
+            onClick={startAR}
+            className="w-full py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-xl font-bold text-lg transition shadow-lg shadow-blue-500/30"
           >
-            <Camera className="w-5 h-5 mr-2" />
+            <Camera className="w-5 h-5 inline mr-2" />
             Mulai AR Experience
-          </Button>
-
-          <p className="text-xs text-muted-foreground mt-4">
-            Powered by AR System
-          </p>
-        </motion.div>
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="fixed inset-0 bg-black">
-      {/* Camera Feed */}
-      <video
-        ref={videoRef}
-        className="absolute inset-0 w-full h-full object-cover"
-        playsInline
-        muted={isMuted}
-      />
-
-      {/* Canvas for AR content */}
-      <canvas
-        ref={canvasRef}
-        className="absolute inset-0 w-full h-full pointer-events-none"
-      />
+      {/* AR Scene Container */}
+      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
       {/* Scanning Overlay */}
-      <AnimatePresence>
-        {state === "scanning" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-          >
-            <div className="text-center">
-              {/* Scanning Frame */}
-              <div className="relative w-64 h-64 mx-auto mb-6">
-                <div className="absolute inset-0 border-2 border-dashed border-primary/50 rounded-2xl" />
-                <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-primary" />
-                <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-primary" />
-                <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-2 border-l-2 border-primary" />
-                <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-primary" />
+      {state === "scanning" && !isTracking && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm pointer-events-none">
+          <div className="text-center text-white">
+            {/* Scanning Frame */}
+            <div className="relative w-64 h-64 mx-auto mb-6">
+              <div className="absolute inset-0 border-2 border-dashed border-blue-500/50 rounded-2xl" />
+              <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-blue-500" />
+              <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-blue-500" />
+              <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-2 border-l-2 border-blue-500" />
+              <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-blue-500" />
 
-                {/* Scanning Line */}
-                <motion.div
-                  initial={{ top: 0 }}
-                  animate={{ top: "100%" }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent"
-                />
-              </div>
-
-              <div className="flex items-center gap-2 justify-center text-white">
-                <ScanLine className="w-5 h-5 animate-pulse" />
-                <span className="font-medium">Scanning for target...</span>
-              </div>
-              <p className="text-white/60 text-sm mt-2">
-                Arahkan kamera ke target image
-              </p>
+              {/* Scanning Line */}
+              <div
+                className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-blue-500 to-transparent animate-pulse"
+                style={{ top: "50%" }}
+              />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
-      {/* AR Content Display */}
-      <AnimatePresence>
-        {state === "tracking" && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-          >
-            {/* Simulated AR Content */}
-            <div className="w-3/4 max-w-md aspect-video bg-gradient-to-br from-primary/40 via-secondary/40 to-accent/40 rounded-2xl shadow-2xl shadow-primary/30 flex items-center justify-center">
-              {project.contentType === "video" && (
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-center"
-                >
-                  <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-2">
-                    <div className="w-0 h-0 border-l-8 border-l-white border-y-6 border-y-transparent ml-1" />
-                  </div>
-                  <p className="text-white text-sm font-medium">
-                    AR Video Playing
-                  </p>
-                </motion.div>
-              )}
+            <div className="flex items-center gap-2 justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+              <span className="font-medium">Scanning for marker...</span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <p className="text-white/60 text-sm mt-2">
+              Arahkan kamera ke HIRO marker
+            </p>
+          </div>
+        </div>
+      )}
 
-      {/* UI Controls */}
-      <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent">
-        <div className="max-w-4xl mx-auto">
-          {/* Tracking Status */}
-          {state === "tracking" && (
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-center gap-2 mb-4"
-            >
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/50 backdrop-blur-sm border border-green-500/30">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                <span className="text-white text-sm font-medium">
-                  Tracking:{" "}
-                  {trackingQuality === "excellent"
-                    ? "Excellent"
-                    : trackingQuality === "good"
-                    ? "Good"
-                    : "Poor"}
-                </span>
-              </div>
-            </motion.div>
+      {/* Top Bar */}
+      <div className="absolute inset-x-0 top-0 p-6 bg-gradient-to-b from-black/80 to-transparent z-10">
+        <div className="flex items-center justify-between text-white">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+              <span className="text-white text-xs font-bold">AR</span>
+            </div>
+            <span className="font-bold">AR System</span>
+          </div>
+
+          {isTracking && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30">
+              <Check className="w-4 h-4 text-green-400" />
+              <span className="text-sm font-medium">Tracking</span>
+            </div>
           )}
+        </div>
+      </div>
 
-          {/* Controls */}
+      {/* Bottom Controls */}
+      <div className="absolute inset-x-0 bottom-0 p-6 bg-gradient-to-t from-black/80 to-transparent z-10">
+        <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
-              onClick={() => {
-                stopCamera();
-                navigate("/");
-              }}
+            <button
+              onClick={handleBack}
+              className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
             >
               <X className="w-6 h-6" />
-            </Button>
+            </button>
 
             <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                {isMuted ? (
-                  <VolumeX className="w-6 h-6" />
-                ) : (
-                  <Volume2 className="w-6 h-6" />
-                )}
-              </Button>
+              {project.contentType === "video" && (
+                <button
+                  onClick={toggleMute}
+                  className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
+                >
+                  {isMuted ? (
+                    <VolumeX className="w-6 h-6" />
+                  ) : (
+                    <Volume2 className="w-6 h-6" />
+                  )}
+                </button>
+              )}
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+              <button
                 onClick={() => setShowInfo(!showInfo)}
+                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
               >
                 <Info className="w-6 h-6" />
-              </Button>
+              </button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70"
+              <button
                 onClick={toggleFullscreen}
+                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
               >
                 <Maximize2 className="w-6 h-6" />
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       {/* Info Panel */}
-      <AnimatePresence>
-        {showInfo && (
-          <motion.div
-            initial={{ opacity: 0, x: 300 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 300 }}
-            className="absolute right-0 top-0 bottom-0 w-80 bg-black/90 backdrop-blur-md border-l border-white/10 p-6 overflow-y-auto"
-          >
-            <div className="flex items-start justify-between mb-6">
-              <h3 className="font-display text-xl font-bold text-white">
-                {project.name}
-              </h3>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/10"
-                onClick={() => setShowInfo(false)}
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            </div>
-
-            {project.description && (
-              <p className="text-white/70 text-sm mb-6">
-                {project.description}
-              </p>
-            )}
-
-            <div className="space-y-4 text-sm">
-              <div>
-                <p className="text-white/50 mb-1">Content Type</p>
-                <p className="text-white capitalize">
-                  {project.contentType.replace("_", " ")}
-                </p>
-              </div>
-              <div>
-                <p className="text-white/50 mb-1">Tracking Quality</p>
-                <p className="text-white capitalize">
-                  {project.trackingQuality}
-                </p>
-              </div>
-              <div>
-                <p className="text-white/50 mb-1">Views</p>
-                <p className="text-white">
-                  {/* {project?.viewCount?.toLocaleString() ?? 0} views */}
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Top Bar */}
-      <div className="absolute inset-x-0 top-0 p-6 bg-gradient-to-b from-black/80 to-transparent">
-        <div className="flex items-center justify-between text-white">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <span className="text-white text-xs font-bold">AR</span>
-            </div>
-            <span className="font-display font-semibold">AR System</span>
+      {showInfo && (
+        <div className="absolute right-0 top-0 bottom-0 w-80 bg-black/90 backdrop-blur-md border-l border-white/10 p-6 overflow-y-auto z-20">
+          <div className="flex items-start justify-between mb-6">
+            <h3 className="text-xl font-bold text-white">{project.name}</h3>
+            <button
+              onClick={() => setShowInfo(false)}
+              className="text-white hover:bg-white/10 p-1 rounded transition"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
 
-          {state === "tracking" && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30">
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="text-sm font-medium">Target Locked</span>
-            </div>
+          {project.description && (
+            <p className="text-white/70 text-sm mb-6">{project.description}</p>
           )}
+
+          <div className="space-y-4 text-sm">
+            <div>
+              <p className="text-white/50 mb-1">Content Type</p>
+              <p className="text-white capitalize">
+                {project.contentType.replace("_", " ")}
+              </p>
+            </div>
+            <div>
+              <p className="text-white/50 mb-1">Tracking Quality</p>
+              <p className="text-white capitalize">{project.trackingQuality}</p>
+            </div>
+            <div>
+              <p className="text-white/50 mb-1">Status</p>
+              <p className="text-white">
+                {isTracking ? "✅ Tracking Active" : "🔍 Searching..."}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+            <p className="text-xs text-blue-300">
+              💡 Tip: Keep the marker flat and well-lit for best tracking
+              performance
+            </p>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
