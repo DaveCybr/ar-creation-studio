@@ -7,7 +7,6 @@ import {
   X,
   Volume2,
   VolumeX,
-  Maximize2,
   Check,
 } from "lucide-react";
 
@@ -22,6 +21,7 @@ export default function ARViewer() {
   const containerRef = useRef(null);
   const sceneRef = useRef(null);
   const cleanupRef = useRef(null);
+  const initTimeoutRef = useRef(null);
 
   // Load AR libraries and project data
   useEffect(() => {
@@ -40,8 +40,8 @@ export default function ARViewer() {
           targetImageUrl:
             "https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png",
           contentUrl:
-            "https://cdn.aframe.io/a-painter/images/a-painter-logo.png",
-          contentType: "image",
+            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
+          contentType: "video",
           autoPlay: true,
           loopContent: true,
           trackingQuality: "medium",
@@ -60,12 +60,15 @@ export default function ARViewer() {
 
     return () => {
       cleanup();
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
     };
   }, []);
 
   const loadARLibraries = async () => {
     // Check if already loaded
-    if ((window as any).AFRAME && (window as any).THREEx) {
+    if (window.AFRAME && window.THREEx) {
       console.log("✅ AR libraries already loaded");
       return;
     }
@@ -75,7 +78,7 @@ export default function ARViewer() {
 
       // Load A-Frame
       if (!document.getElementById("aframe-script")) {
-        await new Promise<void>((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const script = document.createElement("script");
           script.id = "aframe-script";
           script.src = "https://aframe.io/releases/1.4.2/aframe.min.js";
@@ -92,7 +95,7 @@ export default function ARViewer() {
 
       // Load AR.js
       if (!document.getElementById("arjs-script")) {
-        await new Promise<void>((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const script = document.createElement("script");
           script.id = "arjs-script";
           script.src =
@@ -131,7 +134,11 @@ export default function ARViewer() {
       stream.getTracks().forEach((track) => track.stop());
 
       setState("scanning");
-      await initializeAR();
+
+      // Add delay to ensure DOM is ready and state is updated
+      initTimeoutRef.current = setTimeout(() => {
+        initializeAR();
+      }, 150);
     } catch (err) {
       console.error("❌ Camera permission error:", err);
       setError(
@@ -142,8 +149,25 @@ export default function ARViewer() {
   };
 
   const initializeAR = async () => {
-    if (!containerRef.current || !project) {
-      console.error("❌ Container or project not ready");
+    // Comprehensive validation checks
+    if (!containerRef.current) {
+      console.error("❌ Container ref not ready");
+      setError("AR container not ready. Please try again.");
+      setState("error");
+      return;
+    }
+
+    if (!project) {
+      console.error("❌ Project not loaded");
+      setError("Project data not loaded. Please try again.");
+      setState("error");
+      return;
+    }
+
+    if (!window.AFRAME) {
+      console.error("❌ A-Frame not loaded");
+      setError("AR libraries not loaded. Please refresh the page.");
+      setState("error");
       return;
     }
 
@@ -158,12 +182,19 @@ export default function ARViewer() {
       scene.setAttribute("embedded", "");
       scene.setAttribute(
         "arjs",
-        "sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+        "sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; sourceWidth: 1280; sourceHeight: 960; displayWidth: 1280; displayHeight: 960;"
       );
       scene.setAttribute("vr-mode-ui", "enabled: false");
-      scene.setAttribute("renderer", "logarithmicDepthBuffer: true;");
+      scene.setAttribute(
+        "renderer",
+        "logarithmicDepthBuffer: true; antialias: true;"
+      );
+      scene.setAttribute("device-orientation-permission-ui", "enabled: false");
       scene.style.width = "100%";
       scene.style.height = "100%";
+      scene.style.position = "absolute";
+      scene.style.top = "0";
+      scene.style.left = "0";
 
       // Create marker
       const marker = document.createElement("a-marker");
@@ -176,7 +207,7 @@ export default function ARViewer() {
       if (project.contentType === "image") {
         content = document.createElement("a-image");
         content.setAttribute("src", project.contentUrl);
-        content.setAttribute("rotation", "-90 0 0");
+        content.setAttribute("rotation", "90 0 0");
         content.setAttribute("width", "2");
         content.setAttribute("height", "2");
         content.setAttribute("position", "0 0 0");
@@ -239,6 +270,22 @@ export default function ARViewer() {
       marker.addEventListener("markerFound", onMarkerFound);
       marker.addEventListener("markerLost", onMarkerLost);
 
+      // Scene loaded event
+      const onSceneLoaded = () => {
+        console.log("🎬 Scene loaded");
+        const video = document.querySelector("video");
+        if (video) {
+          console.log("📹 Video found:", {
+            width: video.videoWidth,
+            height: video.videoHeight,
+            playing: !video.paused,
+            visible: video.style.display !== "none",
+          });
+        }
+      };
+
+      scene.addEventListener("loaded", onSceneLoaded);
+
       // Error handling
       const onCameraError = (err) => {
         console.error("📹 Camera error:", err);
@@ -253,6 +300,23 @@ export default function ARViewer() {
       containerRef.current.appendChild(scene);
       sceneRef.current = scene;
 
+      // Force video visibility after scene loads
+      setTimeout(() => {
+        const video = document.querySelector("video");
+        if (video) {
+          video.style.position = "absolute";
+          video.style.top = "0";
+          video.style.left = "0";
+          video.style.width = "100%";
+          video.style.height = "100%";
+          video.style.objectFit = "cover";
+          video.style.zIndex = "0";
+          console.log("📹 Video element styled:", video);
+        } else {
+          console.warn("⚠️ Video element not found");
+        }
+      }, 1000);
+
       console.log("✅ AR scene initialized");
 
       // Store cleanup function
@@ -261,14 +325,15 @@ export default function ARViewer() {
         marker.removeEventListener("markerFound", onMarkerFound);
         marker.removeEventListener("markerLost", onMarkerLost);
         scene.removeEventListener("camera-error", onCameraError);
+        scene.removeEventListener("loaded", onSceneLoaded);
 
-        if ((scene as any).renderer) {
-          (scene as any).renderer.dispose();
+        if (scene.renderer) {
+          scene.renderer.dispose();
         }
       };
     } catch (err) {
       console.error("❌ Failed to initialize AR:", err);
-      setError("Failed to initialize AR scene");
+      setError("Failed to initialize AR scene: " + err.message);
       setState("error");
     }
   };
@@ -287,7 +352,7 @@ export default function ARViewer() {
   const toggleMute = () => {
     const newMuted = !isMuted;
     setIsMuted(newMuted);
-    const video = document.getElementById("ar-video") as HTMLVideoElement;
+    const video = document.getElementById("ar-video");
     if (video) {
       video.muted = newMuted;
     }
@@ -404,7 +469,18 @@ export default function ARViewer() {
   return (
     <div className="fixed inset-0 bg-black">
       {/* AR Scene Container */}
-      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+      <div
+        ref={containerRef}
+        className="absolute inset-0 w-full h-full"
+        style={{
+          width: "100%",
+          height: "100%",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          zIndex: 0,
+        }}
+      />
 
       {/* Scanning Overlay */}
       {state === "scanning" && !isTracking && (
