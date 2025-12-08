@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { GridBackground } from "@/components/GridBackground";
 import { Navbar } from "@/components/Navbar";
 import { QRCodeCard } from "@/components/QrCodeCard";
+import { ProjectDetailSkeleton } from "@/components/LoadingSkeletons";
 import { api, Project, ProjectAnalytics } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -15,7 +16,6 @@ import {
   Video,
   Image,
   Box,
-  Loader2,
   TrendingUp,
   Users,
   Clock,
@@ -78,14 +78,13 @@ export default function ProjectDetail() {
     }
   };
 
+  // Show loading skeleton
   if (isLoading) {
     return (
       <div className="min-h-screen relative">
         <GridBackground />
         <Navbar />
-        <div className="flex items-center justify-center pt-32">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+        <ProjectDetailSkeleton />
       </div>
     );
   }

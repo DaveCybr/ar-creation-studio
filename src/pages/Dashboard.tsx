@@ -1,37 +1,68 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { GridBackground } from '@/components/GridBackground';
-import { Navbar } from '@/components/Navbar';
-import { ProjectCard } from '@/components/ProjectCard';
-import { api, Project } from '@/lib/api';
-import { toast } from '@/hooks/use-toast';
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { GridBackground } from "@/components/GridBackground";
+import { Navbar } from "@/components/Navbar";
+import { ProjectCard } from "@/components/ProjectCard";
+import { DeleteProjectDialog } from "@/components/DeleteProjectDialog";
+import { DashboardSkeleton } from "@/components/LoadingSkeletons";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { api, Project } from "@/lib/api";
+import { toast } from "@/hooks/use-toast";
 import {
   Plus,
   Search,
   LayoutGrid,
   List,
   SlidersHorizontal,
-  Loader2,
   FolderOpen,
-} from 'lucide-react';
+} from "lucide-react";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
+
+interface FilterState {
+  status: string[];
+  contentType: string[];
+  trackingQuality: string[];
+  dateRange: "all" | "7days" | "30days" | "90days";
+  minViews: string;
+  maxViews: string;
+}
+
+const defaultFilters: FilterState = {
+  status: [],
+  contentType: [],
+  trackingQuality: [],
+  dateRange: "all",
+  minViews: "",
+  maxViews: "",
+};
 
 export default function Dashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState<'created_at' | 'view_count' | 'name'>('created_at');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'disabled'>('all');
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"created_at" | "view_count" | "name">(
+    "created_at"
+  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "disabled"
+  >("all");
+  const [advancedFilters, setAdvancedFilters] =
+    useState<FilterState>(defaultFilters);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    isOpen: boolean;
+    projectId: string;
+    projectName: string;
+  } | null>(null);
 
   useEffect(() => {
     loadProjects();
@@ -42,45 +73,103 @@ export default function Dashboard() {
     try {
       const response = await api.getProjects({
         sortBy,
-        sortOrder: 'desc',
-        status: statusFilter === 'all' ? undefined : statusFilter,
+        sortOrder: "desc",
+        status: statusFilter === "all" ? undefined : statusFilter,
       });
       setProjects(response.data.projects);
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Gagal memuat proyek',
-        variant: 'destructive',
+        title: "Error",
+        description: "Gagal memuat proyek",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Yakin ingin menghapus proyek ini?')) return;
-    
+  const handleDeleteClick = (id: string, name: string) => {
+    setDeleteDialog({
+      isOpen: true,
+      projectId: id,
+      projectName: name,
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialog) return;
+
     try {
-      await api.deleteProject(id);
-      setProjects(projects.filter((p) => p.id !== id));
+      await api.deleteProject(deleteDialog.projectId);
+      setProjects(projects.filter((p) => p.id !== deleteDialog.projectId));
       toast({
-        title: 'Berhasil',
-        description: 'Proyek telah dihapus',
+        title: "Berhasil",
+        description: "Proyek telah dihapus",
       });
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Gagal menghapus proyek',
-        variant: 'destructive',
+        title: "Error",
+        description: "Gagal menghapus proyek",
+        variant: "destructive",
       });
+      throw error; // Re-throw untuk handle di dialog
     }
   };
 
-  const filteredProjects = projects.filter(
-    (p) =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  const applyAdvancedFilters = (filters: FilterState) => {
+    setAdvancedFilters(filters);
+    // Implement filter logic here or pass to API
+  };
+
+  const resetAdvancedFilters = () => {
+    setAdvancedFilters(defaultFilters);
+  };
+
+  // Apply filters
+  const filteredProjects = projects.filter((project) => {
+    // Search filter
+    const matchesSearch =
+      project.name.toLowerCase().includes(search.toLowerCase()) ||
+      project.description?.toLowerCase().includes(search.toLowerCase());
+
+    // Advanced filters
+    const matchesStatus =
+      advancedFilters.status.length === 0 ||
+      advancedFilters.status.includes(project.status);
+
+    const matchesContentType =
+      advancedFilters.contentType.length === 0 ||
+      advancedFilters.contentType.includes(project.contentType);
+
+    const matchesTracking =
+      advancedFilters.trackingQuality.length === 0 ||
+      advancedFilters.trackingQuality.includes(project.trackingQuality);
+
+    const matchesViews =
+      (!advancedFilters.minViews ||
+        project.viewCount >= parseInt(advancedFilters.minViews)) &&
+      (!advancedFilters.maxViews ||
+        project.viewCount <= parseInt(advancedFilters.maxViews));
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesContentType &&
+      matchesTracking &&
+      matchesViews
+    );
+  });
+
+  // Show loading skeleton
+  if (isLoading) {
+    return (
+      <div className="min-h-screen relative">
+        <GridBackground />
+        <Navbar />
+        <DashboardSkeleton />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen relative">
@@ -97,7 +186,9 @@ export default function Dashboard() {
             className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
           >
             <div>
-              <h1 className="font-display text-3xl font-bold mb-1">Proyek Saya</h1>
+              <h1 className="font-display text-3xl font-bold mb-1">
+                Proyek Saya
+              </h1>
               <p className="text-muted-foreground">
                 Kelola semua proyek AR Anda di sini
               </p>
@@ -131,13 +222,14 @@ export default function Dashboard() {
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <Select
                   value={statusFilter}
-                  onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}
+                  onValueChange={(v) =>
+                    setStatusFilter(v as typeof statusFilter)
+                  }
                 >
                   <SelectTrigger className="w-full sm:w-36 bg-muted/50 border-border/50">
-                    <SlidersHorizontal className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border-border">
+                  <SelectContent className="glass border-border">
                     <SelectItem value="all">Semua</SelectItem>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="disabled">Disabled</SelectItem>
@@ -151,27 +243,33 @@ export default function Dashboard() {
                   <SelectTrigger className="w-full sm:w-40 bg-muted/50 border-border/50">
                     <SelectValue placeholder="Urutkan" />
                   </SelectTrigger>
-                  <SelectContent className="bg-background border-border">
+                  <SelectContent className="glass border-border">
                     <SelectItem value="created_at">Terbaru</SelectItem>
                     <SelectItem value="view_count">Views</SelectItem>
                     <SelectItem value="name">Nama</SelectItem>
                   </SelectContent>
                 </Select>
 
+                <AdvancedFilters
+                  filters={advancedFilters}
+                  onFiltersChange={applyAdvancedFilters}
+                  onReset={resetAdvancedFilters}
+                />
+
                 <div className="flex items-center justify-center glass rounded-lg p-1">
                   <Button
-                    variant={viewMode === 'grid' ? 'default' : 'ghost'}
+                    variant={viewMode === "grid" ? "default" : "ghost"}
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => setViewMode('grid')}
+                    onClick={() => setViewMode("grid")}
                   >
                     <LayoutGrid className="w-4 h-4" />
                   </Button>
                   <Button
-                    variant={viewMode === 'list' ? 'default' : 'ghost'}
+                    variant={viewMode === "list" ? "default" : "ghost"}
                     size="icon"
                     className="h-8 w-8"
-                    onClick={() => setViewMode('list')}
+                    onClick={() => setViewMode("list")}
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -181,11 +279,7 @@ export default function Dashboard() {
           </motion.div>
 
           {/* Projects Grid */}
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
-          ) : filteredProjects.length === 0 ? (
+          {filteredProjects.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -193,14 +287,16 @@ export default function Dashboard() {
             >
               <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="font-display text-xl font-semibold mb-2">
-                {search ? 'Tidak ada hasil' : 'Belum ada proyek'}
+                {search || advancedFilters.status.length > 0
+                  ? "Tidak ada hasil"
+                  : "Belum ada proyek"}
               </h3>
               <p className="text-muted-foreground mb-6">
-                {search
-                  ? 'Coba kata kunci lain'
-                  : 'Mulai buat proyek AR pertama Anda'}
+                {search || advancedFilters.status.length > 0
+                  ? "Coba ubah filter pencarian Anda"
+                  : "Mulai buat proyek AR pertama Anda"}
               </p>
-              {!search && (
+              {!search && advancedFilters.status.length === 0 && (
                 <Button variant="hero" asChild>
                   <Link to="/projects/new">
                     <Plus className="w-5 h-5 mr-2" />
@@ -212,9 +308,9 @@ export default function Dashboard() {
           ) : (
             <div
               className={
-                viewMode === 'grid'
-                  ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6'
-                  : 'space-y-4'
+                viewMode === "grid"
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
+                  : "space-y-4"
               }
             >
               {filteredProjects.map((project, index) => (
@@ -222,13 +318,23 @@ export default function Dashboard() {
                   key={project.id}
                   project={project}
                   index={index}
-                  onDelete={handleDelete}
+                  onDelete={() => handleDeleteClick(project.id, project.name)}
                 />
               ))}
             </div>
           )}
         </div>
       </main>
+
+      {/* Delete Confirmation Dialog */}
+      {deleteDialog && (
+        <DeleteProjectDialog
+          isOpen={deleteDialog.isOpen}
+          onClose={() => setDeleteDialog(null)}
+          onConfirm={handleDeleteConfirm}
+          projectName={deleteDialog.projectName}
+        />
+      )}
     </div>
   );
 }

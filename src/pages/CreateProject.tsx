@@ -8,19 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 import { GridBackground } from "@/components/GridBackground";
 import { Navbar } from "@/components/Navbar";
+import { FileUploadWithPreview } from "@/components/FileUploadWithPreview";
 import { api } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
-import {
-  ArrowLeft,
-  Upload,
-  Image,
-  Video,
-  Box,
-  Loader2,
-  Check,
-} from "lucide-react";
+import { ArrowLeft, Loader2, Image, Video, Box } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -40,9 +34,17 @@ const projectSchema = z.object({
 
 type ProjectForm = z.infer<typeof projectSchema>;
 
+type UploadStep =
+  | "idle"
+  | "uploading-target"
+  | "uploading-content"
+  | "creating";
+
 export default function CreateProject() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadStep, setUploadStep] = useState<UploadStep>("idle");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [targetImage, setTargetImage] = useState<File | null>(null);
   const [contentFile, setContentFile] = useState<File | null>(null);
   const [contentType, setContentType] = useState<
@@ -68,17 +70,29 @@ export default function CreateProject() {
   const loopContent = watch("loopContent");
   const trackingQuality = watch("trackingQuality");
 
-  const handleTargetImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setTargetImage(file);
+  const getContentAccept = () => {
+    switch (contentType) {
+      case "image":
+        return "image/*";
+      case "video":
+        return "video/*";
+      case "3d_model":
+        return ".glb,.gltf";
+      default:
+        return "*";
     }
   };
 
-  const handleContentFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setContentFile(file);
+  const getStepMessage = () => {
+    switch (uploadStep) {
+      case "uploading-target":
+        return "Mengupload target image...";
+      case "uploading-content":
+        return "Mengupload content...";
+      case "creating":
+        return "Membuat proyek...";
+      default:
+        return "";
     }
   };
 
@@ -93,47 +107,47 @@ export default function CreateProject() {
     }
 
     setIsLoading(true);
+    setUploadProgress(0);
+
     try {
-      // 1. Get presigned URL for target image
-      console.log("📤 Getting presigned URL for target image...");
+      // 1. Upload Target Image
+      setUploadStep("uploading-target");
+      setUploadProgress(10);
+
       const targetUrlRes = await api.getPresignedUrl(
         "target",
         targetImage.type,
         targetImage.size
       );
-      console.log("✅ Target presigned URL:", targetUrlRes.data);
 
-      // 2. Upload target image dengan FormData
-      console.log("📤 Uploading target image...");
+      setUploadProgress(20);
       await api.uploadFile(targetImage, targetUrlRes.data.uploadUrl);
-      console.log("✅ Target image uploaded");
 
-      // 3. Confirm target upload
-      console.log("✅ Confirming target upload...");
+      setUploadProgress(30);
       await api.confirmUpload(targetUrlRes.data.fileKey);
-      console.log("✅ Target upload confirmed");
 
-      // 4. Get presigned URL for content
-      console.log("📤 Getting presigned URL for content...");
+      setUploadProgress(40);
+
+      // 2. Upload Content
+      setUploadStep("uploading-content");
+
       const contentUrlRes = await api.getPresignedUrl(
         "content",
         contentFile.type,
         contentFile.size
       );
-      console.log("✅ Content presigned URL:", contentUrlRes.data);
 
-      // 5. Upload content dengan FormData
-      console.log("📤 Uploading content...");
+      setUploadProgress(50);
       await api.uploadFile(contentFile, contentUrlRes.data.uploadUrl);
-      console.log("✅ Content uploaded");
 
-      // 6. Confirm content upload
-      console.log("✅ Confirming content upload...");
+      setUploadProgress(70);
       await api.confirmUpload(contentUrlRes.data.fileKey);
-      console.log("✅ Content upload confirmed");
 
-      // 7. Create project
-      console.log("📝 Creating project...");
+      setUploadProgress(80);
+
+      // 3. Create Project
+      setUploadStep("creating");
+
       await api.createProject({
         name: data.name,
         description: data.description,
@@ -147,15 +161,19 @@ export default function CreateProject() {
         autoPlay: data.autoPlay,
         loopContent: data.loopContent,
       });
-      console.log("✅ Project created");
+
+      setUploadProgress(100);
 
       toast({
         title: "Berhasil",
         description: "Proyek berhasil dibuat!",
       });
-      navigate("/dashboard");
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 500);
     } catch (error) {
-      console.error("❌ Error:", error);
+      console.error("Error:", error);
       toast({
         title: "Error",
         description:
@@ -164,6 +182,8 @@ export default function CreateProject() {
       });
     } finally {
       setIsLoading(false);
+      setUploadStep("idle");
+      setUploadProgress(0);
     }
   };
 
@@ -200,6 +220,26 @@ export default function CreateProject() {
               Upload target image dan konten AR Anda
             </p>
 
+            {/* Upload Progress */}
+            {isLoading && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="glass rounded-xl p-4 mb-6 border border-primary/30"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  <span className="text-sm font-medium">
+                    {getStepMessage()}
+                  </span>
+                  <span className="ml-auto text-sm text-muted-foreground">
+                    {uploadProgress}%
+                  </span>
+                </div>
+                <Progress value={uploadProgress} className="h-2" />
+              </motion.div>
+            )}
+
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
               {/* Basic Info */}
               <div className="glass rounded-xl p-6 border border-border/50 space-y-6">
@@ -213,6 +253,7 @@ export default function CreateProject() {
                     id="name"
                     placeholder="Masukkan nama proyek"
                     className="bg-muted/50 border-border/50"
+                    disabled={isLoading}
                     {...register("name")}
                   />
                   {errors.name && (
@@ -228,6 +269,7 @@ export default function CreateProject() {
                     id="description"
                     placeholder="Deskripsi proyek (opsional)"
                     className="bg-muted/50 border-border/50 min-h-24"
+                    disabled={isLoading}
                     {...register("description")}
                   />
                 </div>
@@ -240,33 +282,13 @@ export default function CreateProject() {
                 </h2>
 
                 {/* Target Image */}
-                <div className="space-y-2">
-                  <Label>Target Image *</Label>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Gambar yang akan dikenali oleh kamera AR
-                  </p>
-                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border/50 rounded-xl cursor-pointer hover:border-primary/50 transition-colors bg-muted/30">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleTargetImageChange}
-                    />
-                    {targetImage ? (
-                      <div className="flex items-center gap-3">
-                        <Check className="w-6 h-6 text-primary" />
-                        <span className="text-sm">{targetImage.name}</span>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Click untuk upload target image
-                        </p>
-                      </div>
-                    )}
-                  </label>
-                </div>
+                <FileUploadWithPreview
+                  accept="image/*"
+                  label="Target Image *"
+                  description="Gambar yang akan dikenali oleh kamera AR"
+                  onFileSelect={setTargetImage}
+                  maxSize={10}
+                />
 
                 {/* Content Type */}
                 <div className="space-y-2">
@@ -280,14 +302,16 @@ export default function CreateProject() {
                       <button
                         key={type.value}
                         type="button"
-                        onClick={() =>
-                          setContentType(type.value as typeof contentType)
-                        }
+                        disabled={isLoading}
+                        onClick={() => {
+                          setContentType(type.value as typeof contentType);
+                          setContentFile(null); // Reset file when changing type
+                        }}
                         className={`flex flex-col items-center gap-2 p-4 rounded-xl border transition-all ${
                           contentType === type.value
                             ? "border-primary bg-primary/10 text-primary"
                             : "border-border/50 hover:border-primary/50"
-                        }`}
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
                         <type.icon className="w-6 h-6" />
                         <span className="text-sm font-medium">
@@ -299,39 +323,16 @@ export default function CreateProject() {
                 </div>
 
                 {/* Content File */}
-                <div className="space-y-2">
-                  <Label>Content File *</Label>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Konten yang akan ditampilkan di AR
-                  </p>
-                  <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-dashed border-border/50 rounded-xl cursor-pointer hover:border-primary/50 transition-colors bg-muted/30">
-                    <input
-                      type="file"
-                      accept={
-                        contentType === "image"
-                          ? "image/*"
-                          : contentType === "video"
-                          ? "video/*"
-                          : ".glb,.gltf"
-                      }
-                      className="hidden"
-                      onChange={handleContentFileChange}
-                    />
-                    {contentFile ? (
-                      <div className="flex items-center gap-3">
-                        <Check className="w-6 h-6 text-primary" />
-                        <span className="text-sm">{contentFile.name}</span>
-                      </div>
-                    ) : (
-                      <div className="text-center">
-                        <Upload className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Click untuk upload {contentType.replace("_", " ")}
-                        </p>
-                      </div>
-                    )}
-                  </label>
-                </div>
+                <FileUploadWithPreview
+                  accept={getContentAccept()}
+                  label="Content File *"
+                  description={`Konten ${contentType.replace(
+                    "_",
+                    " "
+                  )} yang akan ditampilkan di AR`}
+                  onFileSelect={setContentFile}
+                  maxSize={contentType === "video" ? 100 : 50}
+                />
               </div>
 
               {/* Settings */}
@@ -350,6 +351,7 @@ export default function CreateProject() {
                         v as "low" | "medium" | "high"
                       )
                     }
+                    disabled={isLoading}
                   >
                     <SelectTrigger className="bg-muted/50 border-border/50">
                       <SelectValue />
@@ -374,6 +376,7 @@ export default function CreateProject() {
                   <Switch
                     checked={autoPlay}
                     onCheckedChange={(checked) => setValue("autoPlay", checked)}
+                    disabled={isLoading}
                   />
                 </div>
 
@@ -389,6 +392,7 @@ export default function CreateProject() {
                     onCheckedChange={(checked) =>
                       setValue("loopContent", checked)
                     }
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -401,6 +405,7 @@ export default function CreateProject() {
                   size="lg"
                   className="flex-1"
                   onClick={() => navigate("/dashboard")}
+                  disabled={isLoading}
                 >
                   Batal
                 </Button>
@@ -409,7 +414,7 @@ export default function CreateProject() {
                   variant="hero"
                   size="lg"
                   className="flex-1"
-                  disabled={isLoading}
+                  disabled={isLoading || !targetImage || !contentFile}
                 >
                   {isLoading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
