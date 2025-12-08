@@ -59,7 +59,7 @@ export function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="glass border-border/50">
                   <div className="px-2 py-1.5">
-                    <p className="text-sm font-medium">{user?.fullName}</p>
+                    <p className="text-sm font-medium">{user?.full_name}</p>
                     <p className="text-xs text-muted-foreground">{user?.email}</p>
                   </div>
                   <DropdownMenuSeparator />
