@@ -40,8 +40,8 @@ export default function ARViewer() {
           targetImageUrl:
             "https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png",
           contentUrl:
-            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-          contentType: "video",
+            "https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png",
+          contentType: "image",
           autoPlay: true,
           loopContent: true,
           trackingQuality: "medium",
