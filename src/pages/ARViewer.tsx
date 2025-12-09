@@ -61,25 +61,32 @@ export default function ARViewer() {
 
     loadScripts();
 
+    // AGGRESSIVE fix for responsive styles
     const fixResponsiveStyles = () => {
-      document.body.style.width = "100%";
-      document.body.style.height = "100%";
-      document.body.style.marginLeft = "0";
-      document.body.style.marginTop = "0";
-      document.body.style.marginRight = "0";
-      document.body.style.marginBottom = "0";
+      const body = document.body;
+      const html = document.documentElement;
+
+      body.style.cssText =
+        "width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; position: fixed !important; top: 0 !important; left: 0 !important;";
+      html.style.cssText =
+        "width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important;";
 
       const arjsVideo = document.getElementById("arjs-video");
       if (arjsVideo) {
-        (arjsVideo as HTMLVideoElement).style.width = "100%";
-        (arjsVideo as HTMLVideoElement).style.height = "100%";
-        (arjsVideo as HTMLVideoElement).style.marginLeft = "0";
-        (arjsVideo as HTMLVideoElement).style.marginTop = "0";
-        (arjsVideo as HTMLVideoElement).style.objectFit = "cover";
+        (arjsVideo as HTMLVideoElement).style.cssText =
+          "width: 100vw !important; height: 100vh !important; margin: 0 !important; object-fit: cover !important; position: absolute !important; top: 0 !important; left: 0 !important; z-index: -2 !important;";
       }
+
+      const allVideos = document.querySelectorAll("video");
+      allVideos.forEach((vid) => {
+        if (vid.id === "arjs-video") {
+          vid.style.cssText =
+            "width: 100vw !important; height: 100vh !important; margin: 0 !important; object-fit: cover !important; position: absolute !important; top: 0 !important; left: 0 !important; z-index: -2 !important;";
+        }
+      });
     };
 
-    const interval = setInterval(fixResponsiveStyles, 100);
+    const interval = setInterval(fixResponsiveStyles, 50);
     window.addEventListener("resize", fixResponsiveStyles);
     window.addEventListener("orientationchange", fixResponsiveStyles);
 
@@ -362,6 +369,37 @@ export default function ARViewer() {
 
   return (
     <div className="fixed inset-0 bg-black">
+      <style>{`
+        * { box-sizing: border-box; }
+        html, body {
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden !important;
+          width: 100vw !important;
+          height: 100vh !important;
+          position: fixed !important;
+          top: 0 !important;
+          left: 0 !important;
+          max-width: 100vw !important;
+          max-height: 100vh !important;
+        }
+        video {
+          margin: 0 !important;
+          margin-left: 0 !important;
+          margin-top: 0 !important;
+        }
+        #arjs-video {
+          width: 100vw !important;
+          height: 100vh !important;
+          margin: 0 !important;
+          object-fit: cover !important;
+          position: absolute !important;
+          top: 0 !important;
+          left: 0 !important;
+          z-index: -2 !important;
+        }
+      `}</style>
+
       <div
         ref={containerRef}
         className="absolute inset-0 w-full h-full"
