@@ -86,7 +86,7 @@ export default function ARViewer() {
       });
     };
 
-    const interval = setInterval(fixResponsiveStyles, 50);
+    const interval = setInterval(fixResponsiveStyles, 1000);
     window.addEventListener("resize", fixResponsiveStyles);
     window.addEventListener("orientationchange", fixResponsiveStyles);
 
