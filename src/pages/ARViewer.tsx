@@ -239,7 +239,7 @@ export default function ARViewer() {
           smoothThreshold="10"
         >
           <a-plane
-            width="1."
+            width="1.6"
             height="1.6"
             position="0 0.4 0"
             rotation="-90 0 0"
