@@ -17,20 +17,19 @@ export default function ARViewer() {
   const [showInfo, setShowInfo] = useState(false);
   const [error, setError] = useState("");
 
-  const containerRef = useRef(null);
-  const videoRef = useRef(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const loadScripts = async () => {
       try {
-        // Load A-Frame
         if (!document.getElementById("aframe-script")) {
           await new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.id = "aframe-script";
             script.src = "https://aframe.io/releases/1.3.0/aframe.min.js";
-            script.onload = resolve;
+            script.onload = resolve as any;
             script.onerror = () => reject(new Error("Failed to load A-Frame"));
             document.head.appendChild(script);
           });
@@ -38,14 +37,13 @@ export default function ARViewer() {
           await new Promise((resolve) => setTimeout(resolve, 500));
         }
 
-        // Load AR.js
         if (!document.getElementById("arjs-script")) {
           await new Promise((resolve, reject) => {
             const script = document.createElement("script");
             script.id = "arjs-script";
             script.src =
               "https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js";
-            script.onload = resolve;
+            script.onload = resolve as any;
             script.onerror = () => reject(new Error("Failed to load AR.js"));
             document.head.appendChild(script);
           });
@@ -54,7 +52,7 @@ export default function ARViewer() {
         }
 
         setState("permission");
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load:", err);
         setError(err.message);
         setState("error");
@@ -62,32 +60,57 @@ export default function ARViewer() {
     };
 
     loadScripts();
+
+    const fixResponsiveStyles = () => {
+      document.body.style.width = "100%";
+      document.body.style.height = "100%";
+      document.body.style.marginLeft = "0";
+      document.body.style.marginTop = "0";
+      document.body.style.marginRight = "0";
+      document.body.style.marginBottom = "0";
+
+      const arjsVideo = document.getElementById("arjs-video");
+      if (arjsVideo) {
+        (arjsVideo as HTMLVideoElement).style.width = "100%";
+        (arjsVideo as HTMLVideoElement).style.height = "100%";
+        (arjsVideo as HTMLVideoElement).style.marginLeft = "0";
+        (arjsVideo as HTMLVideoElement).style.marginTop = "0";
+        (arjsVideo as HTMLVideoElement).style.objectFit = "cover";
+      }
+    };
+
+    const interval = setInterval(fixResponsiveStyles, 100);
+    window.addEventListener("resize", fixResponsiveStyles);
+    window.addEventListener("orientationchange", fixResponsiveStyles);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("resize", fixResponsiveStyles);
+      window.removeEventListener("orientationchange", fixResponsiveStyles);
+    };
   }, []);
 
   const startAR = async () => {
     try {
       setState("loading");
 
-      // Check camera permission first without stopping the stream
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
+        video: {
           facingMode: { ideal: "environment" },
           width: { ideal: 1280 },
-          height: { ideal: 720 }
+          height: { ideal: 720 },
         },
       });
-      
-      // Keep the stream active - AR.js will use it
+
       console.log("✅ Camera permission granted");
       streamRef.current = stream;
 
       setState("scanning");
 
-      // Setup AR scene with camera stream
       setTimeout(() => {
         setupARScene(stream);
       }, 300);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Camera error:", err);
       setError("Camera access denied. Please allow camera permissions.");
       setState("error");
@@ -97,28 +120,29 @@ export default function ARViewer() {
   const setupARScene = (stream?: MediaStream) => {
     if (!containerRef.current) return;
 
-    // Clear container and add camera fallback first
-    containerRef.current.innerHTML = '';
+    containerRef.current.innerHTML = "";
 
-    // Create a video element for the camera feed as fallback background
     if (stream) {
-      const videoFallback = document.createElement('video');
-      videoFallback.id = 'camera-fallback';
+      const videoFallback = document.createElement("video");
+      videoFallback.id = "camera-fallback";
       videoFallback.autoplay = true;
       videoFallback.playsInline = true;
       videoFallback.muted = true;
       videoFallback.srcObject = stream;
-      videoFallback.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;';
+      videoFallback.style.cssText =
+        "position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;";
       containerRef.current.appendChild(videoFallback);
-      videoFallback.play().catch(e => console.warn("Fallback video play error:", e));
+      videoFallback
+        .play()
+        .catch((e) => console.warn("Fallback video play error:", e));
       console.log("✅ Camera fallback video added");
     }
 
-    // Create AR scene container
-    const arContainer = document.createElement('div');
-    arContainer.id = 'ar-container';
-    arContainer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;';
-    
+    const arContainer = document.createElement("div");
+    arContainer.id = "ar-container-div";
+    arContainer.style.cssText =
+      "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;";
+
     arContainer.innerHTML = `
       <a-scene
         embedded
@@ -150,9 +174,9 @@ export default function ARViewer() {
           smoothThreshold="5"
         >
           <a-plane
-            width="2"
-            height="1.125"
-            position="0 0 0.01"
+            width="0.9"
+            height="1.6"
+            position="0 0.8 0"
             rotation="-90 0 0"
             material="src: #ar-video; shader: flat; side: double;"
           ></a-plane>
@@ -164,45 +188,50 @@ export default function ARViewer() {
 
     containerRef.current.appendChild(arContainer);
 
-    // Setup event listeners after scene is loaded
     setTimeout(() => {
       const marker = document.querySelector("a-marker");
       const video = document.querySelector("#ar-video");
 
       if (marker && video) {
-        const videoElement = video as HTMLVideoElement;
-        videoRef.current = videoElement;
+        videoRef.current = video as HTMLVideoElement;
 
         marker.addEventListener("markerFound", () => {
           console.log("🎯 Marker found!");
           setIsTracking(true);
-          if (videoElement.paused) {
-            videoElement.play().catch((e) => console.warn("Play error:", e));
+          if ((video as HTMLVideoElement).paused) {
+            (video as HTMLVideoElement)
+              .play()
+              .catch((e) => console.warn("Play error:", e));
           }
         });
 
         marker.addEventListener("markerLost", () => {
           console.log("👻 Marker lost!");
           setIsTracking(false);
-          if (!videoElement.paused) {
-            videoElement.pause();
+          if (!(video as HTMLVideoElement).paused) {
+            (video as HTMLVideoElement).pause();
           }
         });
 
         console.log("✅ AR scene ready");
       }
 
-      // Ensure AR.js webcam video is visible if fallback isn't working
       setTimeout(() => {
-        const arjsVideo = document.querySelector('video[autoplay][playsinline]:not(#camera-fallback):not(#ar-video)') as HTMLVideoElement;
+        const arjsVideo = document.querySelector(
+          "video[autoplay][playsinline]:not(#camera-fallback):not(#ar-video)"
+        ) as HTMLVideoElement;
         if (arjsVideo) {
-          arjsVideo.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; z-index: 0 !important; display: block !important;';
+          arjsVideo.style.cssText =
+            "position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; z-index: 0 !important; display: block !important;";
           console.log("✅ AR.js webcam video styled");
         }
 
-        const canvas = document.querySelector("canvas.a-canvas") as HTMLCanvasElement;
+        const canvas = document.querySelector(
+          "canvas.a-canvas"
+        ) as HTMLCanvasElement;
         if (canvas) {
-          canvas.style.cssText = 'position: absolute !important; z-index: 1 !important; background: transparent !important;';
+          canvas.style.cssText =
+            "position: absolute !important; z-index: 1 !important; background: transparent !important;";
           console.log("✅ Canvas styled");
         }
       }, 1000);
@@ -217,21 +246,19 @@ export default function ARViewer() {
   };
 
   const handleBack = () => {
-    // Stop all camera tracks
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
-    
-    // Also stop any other video streams in the container
-    const videos = document.querySelectorAll('video');
-    videos.forEach(vid => {
+
+    const videos = document.querySelectorAll("video");
+    videos.forEach((vid) => {
       if (vid.srcObject) {
         const stream = vid.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       }
     });
-    
+
     if (containerRef.current) {
       containerRef.current.innerHTML = "";
     }
@@ -291,7 +318,9 @@ export default function ARViewer() {
             </div>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">🎥 AR Video Player</h1>
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">
+            🎥 AR Video Player
+          </h1>
           <p className="text-sm sm:text-lg mb-4 sm:mb-8 opacity-90 px-2">
             Arahkan kamera ke marker HIRO untuk memutar video dalam Augmented
             Reality
@@ -340,18 +369,18 @@ export default function ARViewer() {
       />
 
       {state === "scanning" && !isTracking && (
-        <div 
-          style={{ 
-            position: 'fixed',
+        <div
+          style={{
+            position: "fixed",
             top: 0,
             left: 0,
             right: 0,
             bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            pointerEvents: 'none',
-            zIndex: 9999
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            zIndex: 9999,
           }}
         >
           <div
@@ -377,9 +406,13 @@ export default function ARViewer() {
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-              <span className="text-white text-[10px] sm:text-xs font-bold">AR</span>
+              <span className="text-white text-[10px] sm:text-xs font-bold">
+                AR
+              </span>
             </div>
-            <span className="font-bold text-sm sm:text-base">AR Video Player</span>
+            <span className="font-bold text-sm sm:text-base">
+              AR Video Player
+            </span>
           </div>
 
           {isTracking && (
@@ -429,7 +462,9 @@ export default function ARViewer() {
       {showInfo && (
         <div className="absolute right-0 top-0 bottom-0 w-full sm:w-80 bg-black/90 backdrop-blur-md sm:border-l border-white/10 p-4 sm:p-6 overflow-y-auto z-30">
           <div className="flex items-start justify-between mb-4 sm:mb-6">
-            <h3 className="text-lg sm:text-xl font-bold text-white">AR Video Player</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-white">
+              AR Video Player
+            </h3>
             <button
               onClick={() => setShowInfo(false)}
               className="text-white hover:bg-white/10 p-1.5 rounded transition"
