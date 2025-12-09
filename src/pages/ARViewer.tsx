@@ -340,9 +340,12 @@ export default function ARViewer() {
       />
 
       {state === "scanning" && !isTracking && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 p-4">
+        <div 
+          className="fixed inset-0 flex items-center justify-center pointer-events-none"
+          style={{ zIndex: 15 }}
+        >
           <div
-            className="text-center text-white"
+            className="text-center text-white px-4"
             style={{ textShadow: "0 0 10px rgba(0,0,0,0.8)" }}
           >
             <div className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-4 sm:mb-6">
