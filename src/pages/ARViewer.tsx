@@ -239,9 +239,9 @@ export default function ARViewer() {
           smoothThreshold="10"
         >
           <a-plane
-            width="0.9"
+            width="1."
             height="1.6"
-            position="0 0.8 0"
+            position="0 0.4 0"
             rotation="-90 0 0"
             material="src: #ar-video; shader: flat; side: double;"
           ></a-plane>
