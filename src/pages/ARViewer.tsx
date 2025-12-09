@@ -86,14 +86,72 @@ export default function ARViewer() {
       });
     };
 
-    const interval = setInterval(fixResponsiveStyles, 1000);
-    window.addEventListener("resize", fixResponsiveStyles);
-    window.addEventListener("orientationchange", fixResponsiveStyles);
+    // Use MutationObserver instead of aggressive interval
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "style"
+        ) {
+          const target = mutation.target;
+
+          if (target === document.body) {
+            if (
+              document.body.style.marginLeft !== "0px" ||
+              document.body.style.marginTop !== "0px" ||
+              document.body.style.width !== "100vw"
+            ) {
+              document.body.style.cssText =
+                "width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; position: fixed !important; top: 0 !important; left: 0 !important;";
+            }
+          }
+
+          const arjsVideo = document.getElementById("arjs-video");
+          if (target === arjsVideo && arjsVideo) {
+            if (
+              (arjsVideo as HTMLVideoElement).style.marginLeft !== "0px" ||
+              (arjsVideo as HTMLVideoElement).style.marginTop !== "0px"
+            ) {
+              (arjsVideo as HTMLVideoElement).style.cssText =
+                "width: 100vw !important; height: 100vh !important; margin: 0 !important; object-fit: cover !important; position: absolute !important; top: 0 !important; left: 0 !important; z-index: -2 !important;";
+            }
+          }
+        }
+      });
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+
+    let resizeTimeout: NodeJS.Timeout;
+    const handleResize = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        document.body.style.cssText =
+          "width: 100vw !important; height: 100vh !important; margin: 0 !important; padding: 0 !important; overflow: hidden !important; position: fixed !important; top: 0 !important; left: 0 !important;";
+
+        const arjsVideo = document.getElementById("arjs-video");
+        if (arjsVideo) {
+          (arjsVideo as HTMLVideoElement).style.cssText =
+            "width: 100vw !important; height: 100vh !important; margin: 0 !important; object-fit: cover !important; position: absolute !important; top: 0 !important; left: 0 !important; z-index: -2 !important;";
+        }
+      }, 300);
+    };
+
+    window.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("resize", fixResponsiveStyles);
-      window.removeEventListener("orientationchange", fixResponsiveStyles);
+      observer.disconnect();
+      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
     };
   }, []);
 
@@ -176,9 +234,9 @@ export default function ARViewer() {
           preset="hiro"
           emitevents="true"
           smooth="true"
-          smoothCount="10"
-          smoothTolerance="0.01"
-          smoothThreshold="5"
+          smoothCount="20"
+          smoothTolerance="0.05"
+          smoothThreshold="10"
         >
           <a-plane
             width="0.9"
@@ -195,6 +253,8 @@ export default function ARViewer() {
 
     containerRef.current.appendChild(arContainer);
 
+    let markerLostTimeout: NodeJS.Timeout | null = null;
+
     setTimeout(() => {
       const marker = document.querySelector("a-marker");
       const video = document.querySelector("#ar-video");
@@ -204,6 +264,12 @@ export default function ARViewer() {
 
         marker.addEventListener("markerFound", () => {
           console.log("🎯 Marker found!");
+
+          if (markerLostTimeout) {
+            clearTimeout(markerLostTimeout);
+            markerLostTimeout = null;
+          }
+
           setIsTracking(true);
           if ((video as HTMLVideoElement).paused) {
             (video as HTMLVideoElement)
@@ -214,10 +280,13 @@ export default function ARViewer() {
 
         marker.addEventListener("markerLost", () => {
           console.log("👻 Marker lost!");
-          setIsTracking(false);
-          if (!(video as HTMLVideoElement).paused) {
-            (video as HTMLVideoElement).pause();
-          }
+
+          markerLostTimeout = setTimeout(() => {
+            setIsTracking(false);
+            if (!(video as HTMLVideoElement).paused) {
+              (video as HTMLVideoElement).pause();
+            }
+          }, 2000);
         });
 
         console.log("✅ AR scene ready");
