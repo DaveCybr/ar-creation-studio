@@ -19,6 +19,7 @@ export default function ARViewer() {
 
   const containerRef = useRef(null);
   const videoRef = useRef(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     const loadScripts = async () => {
@@ -67,18 +68,25 @@ export default function ARViewer() {
     try {
       setState("loading");
 
-      // Request camera permission
+      // Check camera permission first without stopping the stream
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: { 
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
       });
-      stream.getTracks().forEach((track) => track.stop());
+      
+      // Keep the stream active - AR.js will use it
+      console.log("✅ Camera permission granted");
+      streamRef.current = stream;
 
       setState("scanning");
 
-      // Wait for container to be ready
+      // Setup AR scene with camera stream
       setTimeout(() => {
-        setupARScene();
-      }, 500);
+        setupARScene(stream);
+      }, 300);
     } catch (err) {
       console.error("Camera error:", err);
       setError("Camera access denied. Please allow camera permissions.");
@@ -86,10 +94,32 @@ export default function ARViewer() {
     }
   };
 
-  const setupARScene = () => {
+  const setupARScene = (stream?: MediaStream) => {
     if (!containerRef.current) return;
 
-    const sceneHTML = `
+    // Clear container and add camera fallback first
+    containerRef.current.innerHTML = '';
+
+    // Create a video element for the camera feed as fallback background
+    if (stream) {
+      const videoFallback = document.createElement('video');
+      videoFallback.id = 'camera-fallback';
+      videoFallback.autoplay = true;
+      videoFallback.playsInline = true;
+      videoFallback.muted = true;
+      videoFallback.srcObject = stream;
+      videoFallback.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;';
+      containerRef.current.appendChild(videoFallback);
+      videoFallback.play().catch(e => console.warn("Fallback video play error:", e));
+      console.log("✅ Camera fallback video added");
+    }
+
+    // Create AR scene container
+    const arContainer = document.createElement('div');
+    arContainer.id = 'ar-container';
+    arContainer.style.cssText = 'position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;';
+    
+    arContainer.innerHTML = `
       <a-scene
         embedded
         arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
@@ -132,7 +162,7 @@ export default function ARViewer() {
       </a-scene>
     `;
 
-    containerRef.current.innerHTML = sceneHTML;
+    containerRef.current.appendChild(arContainer);
 
     // Setup event listeners after scene is loaded
     setTimeout(() => {
@@ -159,37 +189,24 @@ export default function ARViewer() {
           }
         });
 
-        // Force webcam video to be visible
-        setTimeout(() => {
-          const webcamVideos = document.querySelectorAll("video");
-          webcamVideos.forEach((vid) => {
-            // Skip AR content video
-            if (vid.id !== "ar-video") {
-              vid.style.display = "block";
-              vid.style.position = "absolute";
-              vid.style.top = "0";
-              vid.style.left = "0";
-              vid.style.width = "100%";
-              vid.style.height = "100%";
-              vid.style.objectFit = "cover";
-              vid.style.zIndex = "0";
-              console.log("✅ Webcam video visible");
-            }
-          });
-
-          const canvas = document.querySelector(
-            "canvas.a-canvas"
-          ) as HTMLCanvasElement;
-          if (canvas) {
-            canvas.style.position = "absolute";
-            canvas.style.zIndex = "1";
-            console.log("✅ Canvas layered");
-          }
-        }, 500);
-
         console.log("✅ AR scene ready");
       }
-    }, 1000);
+
+      // Ensure AR.js webcam video is visible if fallback isn't working
+      setTimeout(() => {
+        const arjsVideo = document.querySelector('video[autoplay][playsinline]:not(#camera-fallback):not(#ar-video)') as HTMLVideoElement;
+        if (arjsVideo) {
+          arjsVideo.style.cssText = 'position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; object-fit: cover !important; z-index: 0 !important; display: block !important;';
+          console.log("✅ AR.js webcam video styled");
+        }
+
+        const canvas = document.querySelector("canvas.a-canvas") as HTMLCanvasElement;
+        if (canvas) {
+          canvas.style.cssText = 'position: absolute !important; z-index: 1 !important; background: transparent !important;';
+          console.log("✅ Canvas styled");
+        }
+      }, 1000);
+    }, 1500);
   };
 
   const toggleMute = () => {
@@ -200,6 +217,21 @@ export default function ARViewer() {
   };
 
   const handleBack = () => {
+    // Stop all camera tracks
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    // Also stop any other video streams in the container
+    const videos = document.querySelectorAll('video');
+    videos.forEach(vid => {
+      if (vid.srcObject) {
+        const stream = vid.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+    });
+    
     if (containerRef.current) {
       containerRef.current.innerHTML = "";
     }
