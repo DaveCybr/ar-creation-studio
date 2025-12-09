@@ -270,10 +270,10 @@ export default function ARViewer() {
 
   if (state === "permission") {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center p-4">
-        <div className="max-w-md text-center text-white">
-          <div className="mb-8">
-            <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-2xl p-4 shadow-2xl">
+      <div className="fixed inset-0 bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+        <div className="max-w-md w-full text-center text-white py-4 sm:py-0">
+          <div className="mb-4 sm:mb-8">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-3 sm:mb-4 bg-white rounded-xl sm:rounded-2xl p-3 sm:p-4 shadow-2xl">
               <svg viewBox="0 0 100 100" fill="none">
                 <rect
                   x="10"
@@ -291,18 +291,18 @@ export default function ARViewer() {
             </div>
           </div>
 
-          <h1 className="text-4xl font-bold mb-4">🎥 AR Video Player</h1>
-          <p className="text-lg mb-8 opacity-90">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2 sm:mb-4">🎥 AR Video Player</h1>
+          <p className="text-sm sm:text-lg mb-4 sm:mb-8 opacity-90 px-2">
             Arahkan kamera ke marker HIRO untuk memutar video dalam Augmented
             Reality
           </p>
 
-          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-8 text-left">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Info className="w-4 h-4" />
+          <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4 mb-4 sm:mb-8 text-left mx-1 sm:mx-0">
+            <h3 className="font-semibold mb-2 sm:mb-3 flex items-center gap-2 text-sm sm:text-base">
+              <Info className="w-4 h-4 flex-shrink-0" />
               Tips untuk AR
             </h3>
-            <ul className="space-y-2 text-sm opacity-90">
+            <ul className="space-y-1.5 sm:space-y-2 text-xs sm:text-sm opacity-90">
               <li>✅ Download marker HIRO dari link di bawah</li>
               <li>✅ Tampilkan marker di layar atau print</li>
               <li>✅ Pencahayaan harus terang & merata</li>
@@ -312,9 +312,9 @@ export default function ARViewer() {
 
           <button
             onClick={startAR}
-            className="w-full py-4 bg-white text-purple-600 rounded-xl font-bold text-lg transition hover:bg-gray-100 shadow-xl mb-4"
+            className="w-full py-3 sm:py-4 bg-white text-purple-600 rounded-xl font-bold text-base sm:text-lg transition hover:bg-gray-100 shadow-xl mb-3 sm:mb-4"
           >
-            <Camera className="w-5 h-5 inline mr-2" />
+            <Camera className="w-4 h-4 sm:w-5 sm:h-5 inline mr-2" />
             Mulai AR Experience
           </button>
 
@@ -322,7 +322,7 @@ export default function ARViewer() {
             href="https://raw.githubusercontent.com/AR-js-org/AR.js/master/data/images/hiro.png"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm underline opacity-90 hover:opacity-100"
+            className="text-xs sm:text-sm underline opacity-90 hover:opacity-100"
           >
             Download Marker HIRO →
           </a>
@@ -340,73 +340,73 @@ export default function ARViewer() {
       />
 
       {state === "scanning" && !isTracking && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 p-4">
           <div
             className="text-center text-white"
             style={{ textShadow: "0 0 10px rgba(0,0,0,0.8)" }}
           >
-            <div className="relative w-64 h-64 mx-auto mb-6">
+            <div className="relative w-48 h-48 sm:w-64 sm:h-64 mx-auto mb-4 sm:mb-6">
               <div className="absolute inset-0 border-2 border-dashed border-blue-500/50 rounded-2xl animate-pulse" />
-              <div className="absolute -top-2 -left-2 w-8 h-8 border-t-2 border-l-2 border-blue-500" />
-              <div className="absolute -top-2 -right-2 w-8 h-8 border-t-2 border-r-2 border-blue-500" />
-              <div className="absolute -bottom-2 -left-2 w-8 h-8 border-b-2 border-l-2 border-blue-500" />
-              <div className="absolute -bottom-2 -right-2 w-8 h-8 border-b-2 border-r-2 border-blue-500" />
+              <div className="absolute -top-2 -left-2 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-l-2 border-blue-500" />
+              <div className="absolute -top-2 -right-2 w-6 h-6 sm:w-8 sm:h-8 border-t-2 border-r-2 border-blue-500" />
+              <div className="absolute -bottom-2 -left-2 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-l-2 border-blue-500" />
+              <div className="absolute -bottom-2 -right-2 w-6 h-6 sm:w-8 sm:h-8 border-b-2 border-r-2 border-blue-500" />
             </div>
-            <div className="flex items-center gap-2 justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
+            <div className="flex items-center gap-2 justify-center text-sm sm:text-base">
+              <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-blue-400" />
               <span className="font-medium">Scanning for HIRO marker...</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="absolute inset-x-0 top-0 p-4 sm:p-6 bg-gradient-to-b from-black/80 to-transparent z-20">
+      <div className="absolute inset-x-0 top-0 p-3 sm:p-6 bg-gradient-to-b from-black/80 to-transparent z-20">
         <div className="flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-              <span className="text-white text-xs font-bold">AR</span>
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+              <span className="text-white text-[10px] sm:text-xs font-bold">AR</span>
             </div>
-            <span className="font-bold">AR Video Player</span>
+            <span className="font-bold text-sm sm:text-base">AR Video Player</span>
           </div>
 
           {isTracking && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/20 border border-green-500/30 backdrop-blur-sm">
-              <Check className="w-4 h-4 text-green-400" />
-              <span className="text-sm font-medium">Video Playing</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full bg-green-500/20 border border-green-500/30 backdrop-blur-sm">
+              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
+              <span className="text-xs sm:text-sm font-medium">Playing</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
+      <div className="absolute inset-x-0 bottom-0 p-3 sm:p-6 bg-gradient-to-t from-black/80 to-transparent z-20">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between">
             <button
               onClick={handleBack}
-              className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
             >
-              <X className="w-6 h-6" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               {isTracking && (
                 <button
                   onClick={toggleMute}
-                  className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
                 >
                   {isMuted ? (
-                    <VolumeX className="w-6 h-6" />
+                    <VolumeX className="w-5 h-5 sm:w-6 sm:h-6" />
                   ) : (
-                    <Volume2 className="w-6 h-6" />
+                    <Volume2 className="w-5 h-5 sm:w-6 sm:h-6" />
                   )}
                 </button>
               )}
 
               <button
                 onClick={() => setShowInfo(!showInfo)}
-                className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
+                className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/50 backdrop-blur-sm text-white hover:bg-black/70 transition flex items-center justify-center"
               >
-                <Info className="w-6 h-6" />
+                <Info className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
           </div>
@@ -414,35 +414,35 @@ export default function ARViewer() {
       </div>
 
       {showInfo && (
-        <div className="absolute right-0 top-0 bottom-0 w-full sm:w-80 bg-black/90 backdrop-blur-md border-l border-white/10 p-6 overflow-y-auto z-30">
-          <div className="flex items-start justify-between mb-6">
-            <h3 className="text-xl font-bold text-white">AR Video Player</h3>
+        <div className="absolute right-0 top-0 bottom-0 w-full sm:w-80 bg-black/90 backdrop-blur-md sm:border-l border-white/10 p-4 sm:p-6 overflow-y-auto z-30">
+          <div className="flex items-start justify-between mb-4 sm:mb-6">
+            <h3 className="text-lg sm:text-xl font-bold text-white">AR Video Player</h3>
             <button
               onClick={() => setShowInfo(false)}
-              className="text-white hover:bg-white/10 p-1 rounded transition"
+              className="text-white hover:bg-white/10 p-1.5 rounded transition"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
-          <div className="space-y-4 text-sm text-white">
+          <div className="space-y-3 sm:space-y-4 text-sm text-white">
             <div>
-              <p className="text-white/50 mb-1">Status</p>
-              <p>
+              <p className="text-white/50 mb-1 text-xs sm:text-sm">Status</p>
+              <p className="text-sm">
                 {isTracking ? "✅ Video Playing" : "🔍 Searching for marker..."}
               </p>
             </div>
             <div>
-              <p className="text-white/50 mb-1">Video</p>
-              <p>Big Buck Bunny (Demo)</p>
+              <p className="text-white/50 mb-1 text-xs sm:text-sm">Video</p>
+              <p className="text-sm">Big Buck Bunny (Demo)</p>
             </div>
             <div>
-              <p className="text-white/50 mb-1">Audio</p>
-              <p>{isMuted ? "🔇 Muted" : "🔊 Unmuted"}</p>
+              <p className="text-white/50 mb-1 text-xs sm:text-sm">Audio</p>
+              <p className="text-sm">{isMuted ? "🔇 Muted" : "🔊 Unmuted"}</p>
             </div>
           </div>
 
-          <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+          <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
             <p className="text-xs text-blue-300">
               💡 Video akan otomatis play saat marker HIRO terdeteksi
             </p>
