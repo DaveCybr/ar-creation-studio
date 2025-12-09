@@ -94,7 +94,7 @@ export default function ARViewer() {
         embedded
         arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
         vr-mode-ui="enabled: false"
-        renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true;"
+        renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true; alpha: true;"
         style="width: 100%; height: 100%; position: absolute; top: 0; left: 0;"
       >
         <a-assets>
@@ -140,23 +140,52 @@ export default function ARViewer() {
       const video = document.querySelector("#ar-video");
 
       if (marker && video) {
-        videoRef.current = video;
+        const videoElement = video as HTMLVideoElement;
+        videoRef.current = videoElement;
 
         marker.addEventListener("markerFound", () => {
           console.log("🎯 Marker found!");
           setIsTracking(true);
-          if (video.paused) {
-            video.play().catch((e) => console.warn("Play error:", e));
+          if (videoElement.paused) {
+            videoElement.play().catch((e) => console.warn("Play error:", e));
           }
         });
 
         marker.addEventListener("markerLost", () => {
           console.log("👻 Marker lost!");
           setIsTracking(false);
-          if (!video.paused) {
-            video.pause();
+          if (!videoElement.paused) {
+            videoElement.pause();
           }
         });
+
+        // Force webcam video to be visible
+        setTimeout(() => {
+          const webcamVideos = document.querySelectorAll("video");
+          webcamVideos.forEach((vid) => {
+            // Skip AR content video
+            if (vid.id !== "ar-video") {
+              vid.style.display = "block";
+              vid.style.position = "absolute";
+              vid.style.top = "0";
+              vid.style.left = "0";
+              vid.style.width = "100%";
+              vid.style.height = "100%";
+              vid.style.objectFit = "cover";
+              vid.style.zIndex = "0";
+              console.log("✅ Webcam video visible");
+            }
+          });
+
+          const canvas = document.querySelector(
+            "canvas.a-canvas"
+          ) as HTMLCanvasElement;
+          if (canvas) {
+            canvas.style.position = "absolute";
+            canvas.style.zIndex = "1";
+            console.log("✅ Canvas layered");
+          }
+        }, 500);
 
         console.log("✅ AR scene ready");
       }
