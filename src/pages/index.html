@@ -568,6 +568,13 @@
       function setupARScene(stream) {
         arContainer.innerHTML = "";
 
+        // Device detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const isAndroid = /Android/i.test(navigator.userAgent);
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+        
+        console.log(`📱 Device: ${isAndroid ? 'Android' : (isIOS ? 'iOS' : 'Desktop')}`);
+
         if (stream) {
           const videoFallback = document.createElement("video");
           videoFallback.id = "camera-fallback";
@@ -584,10 +591,28 @@
           console.log("✅ Camera fallback video added");
         }
 
+        // Debug info panel for mobile
+        if (isMobile) {
+          const debugPanel = document.createElement("div");
+          debugPanel.id = "debug-panel";
+          debugPanel.style.cssText = "position: fixed; bottom: 80px; left: 10px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; z-index: 9999; border-radius: 8px; max-width: 200px;";
+          debugPanel.innerHTML = `
+            <div>Device: ${isAndroid ? 'Android' : 'iOS'}</div>
+            <div>Scale: ${isAndroid ? '1 -1 1' : '1 1 1'}</div>
+            <div id="debug-video">Video: loading...</div>
+            <div id="debug-marker">Marker: scanning...</div>
+          `;
+          document.body.appendChild(debugPanel);
+        }
+
         const arContainerDiv = document.createElement("div");
         arContainerDiv.id = "ar-container-div";
         arContainerDiv.style.cssText =
           "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;";
+
+        // Android fix: flip Y scale to correct orientation
+        const videoScale = isAndroid ? "1 -1 1" : "1 1 1";
+        const videoRotation = "-90 0 0";
 
         arContainerDiv.innerHTML = `
         <a-scene
@@ -607,7 +632,6 @@
               playsinline
               webkit-playsinline
               crossorigin="anonymous"
-              style="display: none;"
             ></video>
           </a-assets>
 
@@ -619,12 +643,14 @@
             smoothTolerance="0.01"
             smoothThreshold="5"
           >
-            <a-plane
-              scale="1 1 1"
-              position="0 0.4 0"
-              rotation="-90 0 0"
-              material="src: #ar-video; shader: flat; side: double;"
-            ></a-plane>
+            <a-entity
+              id="video-plane"
+              geometry="primitive: plane; width: 1.6; height: 0.9;"
+              position="0 0.5 0"
+              rotation="${videoRotation}"
+              scale="${videoScale}"
+              material="shader: flat; src: #ar-video; side: double; transparent: false; npot: true;"
+            ></a-entity>
           </a-marker>
 
           <a-entity camera></a-entity>
@@ -636,12 +662,37 @@
         setTimeout(() => {
           const marker = document.querySelector("a-marker");
           const video = document.querySelector("#ar-video");
+          const videoPlane = document.querySelector("#video-plane");
+
+          if (video) {
+            // Update video dimensions after metadata loads
+            video.addEventListener('loadedmetadata', () => {
+              const w = video.videoWidth;
+              const h = video.videoHeight;
+              console.log(`📹 Video: ${w}x${h}`);
+              
+              const debugVideo = document.getElementById('debug-video');
+              if (debugVideo) debugVideo.textContent = `Video: ${w}x${h}`;
+              
+              // Update plane aspect ratio
+              if (videoPlane && w && h) {
+                const aspectRatio = w / h;
+                const planeWidth = 1.6;
+                const planeHeight = planeWidth / aspectRatio;
+                videoPlane.setAttribute('geometry', `primitive: plane; width: ${planeWidth}; height: ${planeHeight};`);
+                console.log(`📐 Plane: ${planeWidth}x${planeHeight.toFixed(2)}`);
+              }
+            });
+          }
 
           if (marker && video) {
             videoRef = video;
 
             marker.addEventListener("markerFound", () => {
               console.log("🎯 Marker found!");
+              const debugMarker = document.getElementById('debug-marker');
+              if (debugMarker) debugMarker.textContent = 'Marker: FOUND ✓';
+              
               setTracking(true);
               if (video.paused) {
                 video.play().catch((e) => console.warn("Play error:", e));
@@ -650,10 +701,15 @@
 
             marker.addEventListener("markerLost", () => {
               console.log("👻 Marker lost!");
-              setTracking(false);
-              if (!video.paused) {
-                video.pause();
-              }
+              const debugMarker = document.getElementById('debug-marker');
+              if (debugMarker) debugMarker.textContent = 'Marker: lost';
+              
+              setTimeout(() => {
+                setTracking(false);
+                if (!video.paused) {
+                  video.pause();
+                }
+              }, 2000);
             });
 
             console.log("✅ AR scene ready");
