@@ -208,6 +208,16 @@ export default function ARViewer() {
     arContainer.style.cssText =
       "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;";
 
+    // Detect if mobile device
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    
+    // For Android mobile: video plane needs different rotation to appear correctly
+    // Desktop/iOS: -90 0 0, Android mobile: -90 0 0 but with scale adjustment
+    const videoRotation = "-90 0 0";
+    // Android sometimes renders with incorrect scale, so we flip Y axis
+    const videoScale = isAndroid ? "1 -1 1" : "1 1 1";
+
     arContainer.innerHTML = `
       <a-scene
         embedded
@@ -241,7 +251,8 @@ export default function ARViewer() {
             id="video-entity"
             geometry="primitive: plane; width: 1.6; height: 0.9;"
             position="0 0.5 0"
-            rotation="-90 0 0"
+            rotation="${videoRotation}"
+            scale="${videoScale}"
             material="shader: flat; src: #ar-video; side: double; transparent: false; npot: true;"
           ></a-entity>
         </a-marker>
