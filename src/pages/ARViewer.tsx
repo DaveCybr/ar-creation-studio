@@ -238,13 +238,13 @@ export default function ARViewer() {
           smoothTolerance="0.05"
           smoothThreshold="10"
         >
-          <a-plane
+          <a-video
+            src="#ar-video"
             width="1.6"
-            height="1.6"
-            position="0 0.4 0"
+            height="0.9"
+            position="0 0.5 0"
             rotation="-90 0 0"
-            material="src: #ar-video; shader: flat; side: double;"
-          ></a-plane>
+          ></a-video>
         </a-marker>
 
         <a-entity camera></a-entity>
