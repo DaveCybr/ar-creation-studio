@@ -226,7 +226,6 @@ export default function ARViewer() {
             playsinline
             webkit-playsinline
             crossorigin="anonymous"
-            style="display: none;"
           ></video>
         </a-assets>
 
@@ -238,13 +237,13 @@ export default function ARViewer() {
           smoothTolerance="0.05"
           smoothThreshold="10"
         >
-          <a-video
-            src="#ar-video"
-            width="1.6"
-            height="0.9"
+          <a-entity
+            id="video-entity"
+            geometry="primitive: plane; width: 1.6; height: 0.9;"
             position="0 0.5 0"
             rotation="-90 0 0"
-          ></a-video>
+            material="shader: flat; src: #ar-video; side: double; transparent: false; npot: true;"
+          ></a-entity>
         </a-marker>
 
         <a-entity camera></a-entity>
@@ -257,10 +256,42 @@ export default function ARViewer() {
 
     setTimeout(() => {
       const marker = document.querySelector("a-marker");
-      const video = document.querySelector("#ar-video");
+      const video = document.querySelector("#ar-video") as HTMLVideoElement;
+      const videoEntity = document.querySelector("#video-entity");
+
+      if (video) {
+        // Force video to load metadata first
+        video.load();
+        
+        video.addEventListener('loadedmetadata', () => {
+          console.log(`📹 Video size: ${video.videoWidth}x${video.videoHeight}`);
+          
+          // Calculate aspect ratio and update geometry
+          const aspectRatio = video.videoWidth / video.videoHeight;
+          const width = 1.6;
+          const height = width / aspectRatio;
+          
+          if (videoEntity) {
+            videoEntity.setAttribute('geometry', `primitive: plane; width: ${width}; height: ${height};`);
+            console.log(`📐 Updated geometry: ${width}x${height}`);
+          }
+        });
+
+        // For Android: ensure video is ready before texture update
+        video.addEventListener('canplaythrough', () => {
+          console.log('✅ Video can play through');
+          if (videoEntity) {
+            // Force material refresh on Android
+            const material = (videoEntity as any).getAttribute('material');
+            if (material) {
+              (videoEntity as any).setAttribute('material', { ...material, src: '#ar-video' });
+            }
+          }
+        });
+      }
 
       if (marker && video) {
-        videoRef.current = video as HTMLVideoElement;
+        videoRef.current = video;
 
         marker.addEventListener("markerFound", () => {
           console.log("🎯 Marker found!");
@@ -271,10 +302,8 @@ export default function ARViewer() {
           }
 
           setIsTracking(true);
-          if ((video as HTMLVideoElement).paused) {
-            (video as HTMLVideoElement)
-              .play()
-              .catch((e) => console.warn("Play error:", e));
+          if (video.paused) {
+            video.play().catch((e) => console.warn("Play error:", e));
           }
         });
 
@@ -283,8 +312,8 @@ export default function ARViewer() {
 
           markerLostTimeout = setTimeout(() => {
             setIsTracking(false);
-            if (!(video as HTMLVideoElement).paused) {
-              (video as HTMLVideoElement).pause();
+            if (!video.paused) {
+              video.pause();
             }
           }, 2000);
         });
