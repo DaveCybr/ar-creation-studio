@@ -215,8 +215,8 @@ export default function ARViewer() {
     // For Android mobile: video plane needs different rotation to appear correctly
     // Desktop/iOS: -90 0 0, Android mobile: -90 0 0 but with scale adjustment
     const videoRotation = "-90 0 0";
-    // Android sometimes renders with incorrect scale, so we flip Y axis
-    const videoScale = isAndroid ? "1 -1 1" : "1 1 1";
+    // Universal fix: flip Y scale untuk semua device
+    const videoScale = "1 -1 1";
 
     arContainer.innerHTML = `
       <a-scene
@@ -229,7 +229,7 @@ export default function ARViewer() {
         <a-assets>
           <video
             id="ar-video"
-            src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+            src="https://assets.mixkit.co/videos/preview/mixkit-woman-dancing-happily-in-front-of-a-pink-background-42296-large.mp4"
             preload="auto"
             loop
             muted
@@ -249,8 +249,8 @@ export default function ARViewer() {
         >
           <a-entity
             id="video-entity"
-            geometry="primitive: plane; width: 1.6; height: 0.9;"
-            position="0 0.5 0"
+            geometry="primitive: plane; width: 1.35; height: 2.4;"
+            position="0 0 0"
             rotation="${videoRotation}"
             scale="${videoScale}"
             material="shader: flat; src: #ar-video; side: double; transparent: false; npot: true;"
