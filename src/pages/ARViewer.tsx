@@ -217,9 +217,9 @@ export default function ARViewer() {
 
     // For Android mobile: video plane needs different rotation to appear correctly
     // Desktop/iOS: -90 0 0, Android mobile: -90 0 0 but with scale adjustment
-    const videoRotation = "-90 -90 0";
+    const videoRotation = "-90 0 0";
     // Universal fix: flip Y scale untuk semua device
-    const videoScale = "1 0 1";
+    const videoScale = "1 1 1";
 
     arContainer.innerHTML = `
       <a-scene
