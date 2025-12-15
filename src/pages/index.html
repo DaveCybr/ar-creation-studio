@@ -598,7 +598,7 @@
           debugPanel.style.cssText = "position: fixed; bottom: 80px; left: 10px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; z-index: 9999; border-radius: 8px; max-width: 200px;";
           debugPanel.innerHTML = `
             <div>Device: ${isAndroid ? 'Android' : 'iOS'}</div>
-            <div>Scale: ${isAndroid ? '1 -1 1' : '1 1 1'}</div>
+            <div>Scale: 1 -1 1 (all)</div>
             <div id="debug-video">Video: loading...</div>
             <div id="debug-marker">Marker: scanning...</div>
           `;
@@ -610,8 +610,8 @@
         arContainerDiv.style.cssText =
           "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;";
 
-        // Android fix: flip Y scale to correct orientation
-        const videoScale = isAndroid ? "1 -1 1" : "1 1 1";
+        // Universal fix: flip Y scale untuk semua device
+        const videoScale = "1 -1 1";
         const videoRotation = "-90 0 0";
 
         arContainerDiv.innerHTML = `
