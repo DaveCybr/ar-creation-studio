@@ -1,342 +1,429 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>AR Video Player - MindAR</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { 
-      width: 100%; 
-      height: 100%; 
-      overflow: hidden;
-      background: #000;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    #container {
-      width: 100vw;
-      height: 100vh;
-      position: relative;
-      overflow: hidden;
-    }
-    #overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      z-index: 100;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #1a1a2e 0%, #0f3460 50%, #1a1a2e 100%);
-      color: white;
-      padding: 20px;
-      text-align: center;
-    }
-    #overlay.hidden { display: none; }
-    .logo {
-      width: 80px;
-      height: 80px;
-      background: linear-gradient(135deg, #00d4ff, #0066ff);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-bottom: 20px;
-      box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
-    }
-    .logo svg { width: 50px; height: 50px; }
-    h1 {
-      font-size: 28px;
-      margin-bottom: 10px;
-      background: linear-gradient(to right, #00d4ff, #0099ff);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    p { color: #aaa; margin-bottom: 20px; font-size: 14px; }
-    .tips {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 12px;
-      padding: 16px;
-      text-align: left;
-      max-width: 320px;
-      margin-bottom: 20px;
-    }
-    .tips h3 { color: #00d4ff; font-size: 14px; margin-bottom: 10px; }
-    .tips ul { list-style: none; font-size: 13px; color: #ccc; }
-    .tips li { margin-bottom: 8px; padding-left: 20px; position: relative; }
-    .tips li::before { content: "→"; position: absolute; left: 0; color: #00d4ff; }
-    #startBtn {
-      width: 100%;
-      max-width: 320px;
-      padding: 16px;
-      font-size: 16px;
-      font-weight: bold;
-      color: white;
-      background: linear-gradient(135deg, #00d4ff, #0066ff);
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      box-shadow: 0 8px 30px rgba(0, 212, 255, 0.3);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    #startBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 212, 255, 0.4); }
-    #startBtn:active { transform: translateY(0); }
-    #startBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .download-link {
-      margin-top: 16px;
-      color: #00d4ff;
-      text-decoration: underline;
-      font-size: 13px;
-    }
-    #status {
-      position: fixed;
-      top: 16px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 50;
-      background: rgba(0,0,0,0.7);
-      backdrop-filter: blur(8px);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 13px;
-      color: white;
-      display: none;
-    }
-    #status.visible { display: flex; align-items: center; gap: 8px; }
-    #status.tracking { background: rgba(34, 197, 94, 0.8); }
-    .scan-guide {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border: 2px solid rgba(0, 212, 255, 0.5);
-      border-radius: 12px;
-      z-index: 40;
-      pointer-events: none;
-      animation: pulse 2s infinite;
-    }
-    .scan-guide.hidden { display: none; }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
-      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
-    }
-    .loading-text { font-size: 12px; color: #888; margin-top: 10px; }
-  </style>
-
-  <!-- Import Map for ES Modules -->
-  <script type="importmap">
-  {
-    "imports": {
-      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
-      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
-    }
-  }
-  </script>
-</head>
-<body>
-  <!-- Overlay -->
-  <div id="overlay">
-    <div class="logo">
-      <svg viewBox="0 0 100 100" fill="none">
-        <path d="M50 15L85 85H15L50 15Z" fill="white" fill-opacity="0.9"/>
-        <circle cx="50" cy="55" r="12" fill="white"/>
-      </svg>
-    </div>
-    <h1>AR Video Player</h1>
-    <p>MindAR + Three.js Experience</p>
-    
-    <div class="tips">
-      <h3>📱 Cara Penggunaan</h3>
-      <ul>
-        <li>Download target card di bawah</li>
-        <li>Tampilkan di layar lain atau print</li>
-        <li>Tekan "Mulai AR" dan izinkan kamera</li>
-        <li>Arahkan kamera ke target card</li>
-      </ul>
-    </div>
-    
-    <button id="startBtn" disabled>Loading libraries...</button>
-    <div id="loadingText" class="loading-text">Initializing AR engine...</div>
-    
-    <a class="download-link" href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png" target="_blank">
-      📥 Download Target Card
-    </a>
-  </div>
-
-  <!-- Status -->
-  <div id="status">
-    <span id="statusIcon">🔍</span>
-    <span id="statusText">Scanning...</span>
-  </div>
-
-  <!-- Scan Guide -->
-  <div class="scan-guide hidden" id="scanGuide"></div>
-
-  <!-- AR Container -->
-  <div id="container"></div>
-
-  <!-- Main Script as ES Module -->
-  <script type="module">
-    import * as THREE from 'three';
-    import { MindARThree } from 'mindar-image-three';
-
-    // Make THREE available globally for debugging
-    window.THREE = THREE;
-
-    const overlay = document.getElementById('overlay');
-    const startBtn = document.getElementById('startBtn');
-    const loadingText = document.getElementById('loadingText');
-    const container = document.getElementById('container');
-    const status = document.getElementById('status');
-    const statusIcon = document.getElementById('statusIcon');
-    const statusText = document.getElementById('statusText');
-    const scanGuide = document.getElementById('scanGuide');
-
-    let mindarThree = null;
-    let videoElement = null;
-    let isTracking = false;
-
-    // Enable button after libraries loaded
-    startBtn.disabled = false;
-    startBtn.textContent = '📸 Mulai AR Experience';
-    loadingText.style.display = 'none';
-    console.log('✅ MindAR & Three.js loaded via ES Modules');
-
-    startBtn.addEventListener('click', startAR);
-
-    async function startAR() {
-      try {
-        startBtn.disabled = true;
-        startBtn.textContent = 'Starting...';
-
-        // Request camera permission
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        stream.getTracks().forEach(t => t.stop());
-
-        overlay.classList.add('hidden');
-        status.classList.add('visible');
-        scanGuide.classList.remove('hidden');
-
-        // Initialize MindAR
-        mindarThree = new MindARThree({
-          container: container,
-          imageTargetSrc: 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind',
-          uiLoading: 'no',
-          uiScanning: 'no',
-          uiError: 'no',
-        });
-
-        const { renderer, scene, camera } = mindarThree;
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-        // Create video element
-        videoElement = document.createElement('video');
-        videoElement.src = 'https://assets.mixkit.co/videos/preview/mixkit-woman-dancing-happily-in-front-of-a-pink-background-42296-large.mp4';
-        videoElement.crossOrigin = 'anonymous';
-        videoElement.loop = true;
-        videoElement.muted = true;
-        videoElement.playsInline = true;
-        videoElement.preload = 'auto';
-
-        // Wait for video metadata
-        await new Promise((resolve, reject) => {
-          videoElement.onloadedmetadata = resolve;
-          videoElement.onerror = () => reject(new Error('Failed to load video'));
-          videoElement.load();
-        });
-
-        console.log('📹 Video loaded:', videoElement.videoWidth, 'x', videoElement.videoHeight);
-
-        // Create video texture
-        const videoTexture = new THREE.VideoTexture(videoElement);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        videoTexture.colorSpace = THREE.SRGBColorSpace;
-        videoTexture.generateMipmaps = false;
-
-        // Target card aspect ratio ~1:0.55
-        const targetWidth = 1;
-        const targetHeight = 0.55;
-        const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
-        const targetAspect = targetWidth / targetHeight;
-
-        // COVER mode: fill target, crop excess
-        let planeWidth, planeHeight;
-        if (videoAspect > targetAspect) {
-          // Video is wider - match height, crop sides
-          planeHeight = targetHeight;
-          planeWidth = targetHeight * videoAspect;
-        } else {
-          // Video is taller (portrait) - match width, crop top/bottom
-          planeWidth = targetWidth;
-          planeHeight = targetWidth / videoAspect;
-        }
-
-        console.log('📐 Plane size:', planeWidth.toFixed(2), 'x', planeHeight.toFixed(2));
-
-        // Create video plane
-        const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
-        const material = new THREE.MeshBasicMaterial({
-          map: videoTexture,
-          side: THREE.DoubleSide,
-          toneMapped: false,
-        });
-        const videoPlane = new THREE.Mesh(geometry, material);
-
-        // Add to anchor
-        const anchor = mindarThree.addAnchor(0);
-        anchor.group.add(videoPlane);
-
-        // Target events
-        anchor.onTargetFound = () => {
-          console.log('🎯 Target found!');
-          isTracking = true;
-          status.classList.add('tracking');
-          statusIcon.textContent = '✅';
-          statusText.textContent = 'Playing';
-          scanGuide.classList.add('hidden');
-          videoElement.play().catch(e => console.warn('Play error:', e));
-        };
-
-        anchor.onTargetLost = () => {
-          console.log('👻 Target lost');
-          isTracking = false;
-          status.classList.remove('tracking');
-          statusIcon.textContent = '🔍';
-          statusText.textContent = 'Scanning...';
-          scanGuide.classList.remove('hidden');
-        };
-
-        // Start AR
-        await mindarThree.start();
-        console.log('✅ MindAR started successfully');
-
-        // Animation loop
-        renderer.setAnimationLoop(() => {
-          if (videoElement && videoElement.readyState >= videoElement.HAVE_CURRENT_DATA) {
-            videoTexture.needsUpdate = true;
-          }
-          renderer.render(scene, camera);
-        });
-
-      } catch (err) {
-        console.error('❌ AR Error:', err);
-        alert('Error: ' + err.message);
-        overlay.classList.remove('hidden');
-        startBtn.disabled = false;
-        startBtn.textContent = '📸 Mulai AR Experience';
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>AR Video Player - MindAR</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
       }
-    }
-  </script>
-</body>
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+      }
+      #container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        overflow: hidden;
+      }
+      #overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(
+          135deg,
+          #1a1a2e 0%,
+          #0f3460 50%,
+          #1a1a2e 100%
+        );
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      #overlay.hidden {
+        display: none;
+      }
+      .logo {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #00d4ff, #0066ff);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 40px rgba(0, 212, 255, 0.3);
+      }
+      .logo svg {
+        width: 50px;
+        height: 50px;
+      }
+      h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+        background: linear-gradient(to right, #00d4ff, #0099ff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      p {
+        color: #aaa;
+        margin-bottom: 20px;
+        font-size: 14px;
+      }
+      .tips {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 16px;
+        text-align: left;
+        max-width: 320px;
+        margin-bottom: 20px;
+      }
+      .tips h3 {
+        color: #00d4ff;
+        font-size: 14px;
+        margin-bottom: 10px;
+      }
+      .tips ul {
+        list-style: none;
+        font-size: 13px;
+        color: #ccc;
+      }
+      .tips li {
+        margin-bottom: 8px;
+        padding-left: 20px;
+        position: relative;
+      }
+      .tips li::before {
+        content: "→";
+        position: absolute;
+        left: 0;
+        color: #00d4ff;
+      }
+      #startBtn {
+        width: 100%;
+        max-width: 320px;
+        padding: 16px;
+        font-size: 16px;
+        font-weight: bold;
+        color: white;
+        background: linear-gradient(135deg, #00d4ff, #0066ff);
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        box-shadow: 0 8px 30px rgba(0, 212, 255, 0.3);
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      #startBtn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px rgba(0, 212, 255, 0.4);
+      }
+      #startBtn:active {
+        transform: translateY(0);
+      }
+      #startBtn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .download-link {
+        margin-top: 16px;
+        color: #00d4ff;
+        text-decoration: underline;
+        font-size: 13px;
+      }
+      #status {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 50;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 13px;
+        color: white;
+        display: none;
+      }
+      #status.visible {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      #status.tracking {
+        background: rgba(34, 197, 94, 0.8);
+      }
+      .scan-guide {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 200px;
+        height: 200px;
+        border: 2px solid rgba(0, 212, 255, 0.5);
+        border-radius: 12px;
+        z-index: 40;
+        pointer-events: none;
+        animation: pulse 2s infinite;
+      }
+      .scan-guide.hidden {
+        display: none;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 0.5;
+          transform: translate(-50%, -50%) scale(1);
+        }
+        50% {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1.02);
+        }
+      }
+      .loading-text {
+        font-size: 12px;
+        color: #888;
+        margin-top: 10px;
+      }
+    </style>
+
+    <!-- Import Map for ES Modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+          "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <!-- Overlay -->
+    <div id="overlay">
+      <div class="logo">
+        <svg viewBox="0 0 100 100" fill="none">
+          <path d="M50 15L85 85H15L50 15Z" fill="white" fill-opacity="0.9" />
+          <circle cx="50" cy="55" r="12" fill="white" />
+        </svg>
+      </div>
+      <h1>AR Video Player</h1>
+      <p>MindAR + Three.js Experience</p>
+
+      <div class="tips">
+        <h3>📱 Cara Penggunaan</h3>
+        <ul>
+          <li>Download target card di bawah</li>
+          <li>Tampilkan di layar lain atau print</li>
+          <li>Tekan "Mulai AR" dan izinkan kamera</li>
+          <li>Arahkan kamera ke target card</li>
+        </ul>
+      </div>
+
+      <button id="startBtn" disabled>Loading libraries...</button>
+      <div id="loadingText" class="loading-text">Initializing AR engine...</div>
+
+      <a
+        class="download-link"
+        href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png"
+        target="_blank"
+      >
+        📥 Download Target Card
+      </a>
+    </div>
+
+    <!-- Status -->
+    <div id="status">
+      <span id="statusIcon">🔍</span>
+      <span id="statusText">Scanning...</span>
+    </div>
+
+    <!-- Scan Guide -->
+    <div class="scan-guide hidden" id="scanGuide"></div>
+
+    <!-- AR Container -->
+    <div id="container"></div>
+
+    <!-- Main Script as ES Module -->
+    <script type="module">
+      import * as THREE from "three";
+      import { MindARThree } from "mindar-image-three";
+
+      // Make THREE available globally for debugging
+      window.THREE = THREE;
+
+      const overlay = document.getElementById("overlay");
+      const startBtn = document.getElementById("startBtn");
+      const loadingText = document.getElementById("loadingText");
+      const container = document.getElementById("container");
+      const status = document.getElementById("status");
+      const statusIcon = document.getElementById("statusIcon");
+      const statusText = document.getElementById("statusText");
+      const scanGuide = document.getElementById("scanGuide");
+
+      let mindarThree = null;
+      let videoElement = null;
+      let isTracking = false;
+
+      // Enable button after libraries loaded
+      startBtn.disabled = false;
+      startBtn.textContent = "📸 Mulai AR Experience";
+      loadingText.style.display = "none";
+      console.log("✅ MindAR & Three.js loaded via ES Modules");
+
+      startBtn.addEventListener("click", startAR);
+
+      async function startAR() {
+        try {
+          startBtn.disabled = true;
+          startBtn.textContent = "Starting...";
+
+          // Request camera permission
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" },
+          });
+          stream.getTracks().forEach((t) => t.stop());
+
+          overlay.classList.add("hidden");
+          status.classList.add("visible");
+          scanGuide.classList.remove("hidden");
+
+          // Initialize MindAR
+          mindarThree = new MindARThree({
+            container: container,
+            imageTargetSrc:
+              "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind",
+            uiLoading: "no",
+            uiScanning: "no",
+            uiError: "no",
+          });
+
+          const { renderer, scene, camera } = mindarThree;
+          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+          // Create video element
+          videoElement = document.createElement("video");
+          videoElement.src = "/assets/vid.mp4";
+          videoElement.crossOrigin = "anonymous";
+          videoElement.loop = true;
+          videoElement.muted = true;
+          videoElement.playsInline = true;
+          videoElement.preload = "auto";
+
+          // Wait for video metadata
+          await new Promise((resolve, reject) => {
+            videoElement.onloadedmetadata = resolve;
+            videoElement.onerror = () =>
+              reject(new Error("Failed to load video"));
+            videoElement.load();
+          });
+
+          console.log(
+            "📹 Video loaded:",
+            videoElement.videoWidth,
+            "x",
+            videoElement.videoHeight
+          );
+
+          // Create video texture
+          const videoTexture = new THREE.VideoTexture(videoElement);
+          videoTexture.minFilter = THREE.LinearFilter;
+          videoTexture.magFilter = THREE.LinearFilter;
+          videoTexture.colorSpace = THREE.SRGBColorSpace;
+          videoTexture.generateMipmaps = false;
+
+          // Target card aspect ratio ~1:0.55
+          const targetWidth = 1;
+          const targetHeight = 0.55;
+          const videoAspect =
+            videoElement.videoWidth / videoElement.videoHeight;
+          const targetAspect = targetWidth / targetHeight;
+
+          // COVER mode: fill target, crop excess
+          let planeWidth, planeHeight;
+          if (videoAspect > targetAspect) {
+            // Video is wider - match height, crop sides
+            planeHeight = targetHeight;
+            planeWidth = targetHeight * videoAspect;
+          } else {
+            // Video is taller (portrait) - match width, crop top/bottom
+            planeWidth = targetWidth;
+            planeHeight = targetWidth / videoAspect;
+          }
+
+          console.log(
+            "📐 Plane size:",
+            planeWidth.toFixed(2),
+            "x",
+            planeHeight.toFixed(2)
+          );
+
+          // Create video plane
+          const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+          const material = new THREE.MeshBasicMaterial({
+            map: videoTexture,
+            side: THREE.DoubleSide,
+            toneMapped: false,
+          });
+          const videoPlane = new THREE.Mesh(geometry, material);
+
+          // Add to anchor
+          const anchor = mindarThree.addAnchor(0);
+          anchor.group.add(videoPlane);
+
+          // Target events
+          anchor.onTargetFound = () => {
+            console.log("🎯 Target found!");
+            isTracking = true;
+            status.classList.add("tracking");
+            statusIcon.textContent = "✅";
+            statusText.textContent = "Playing";
+            scanGuide.classList.add("hidden");
+            videoElement.play().catch((e) => console.warn("Play error:", e));
+          };
+
+          anchor.onTargetLost = () => {
+            console.log("👻 Target lost");
+            isTracking = false;
+            status.classList.remove("tracking");
+            statusIcon.textContent = "🔍";
+            statusText.textContent = "Scanning...";
+            scanGuide.classList.remove("hidden");
+          };
+
+          // Start AR
+          await mindarThree.start();
+          console.log("✅ MindAR started successfully");
+
+          // Animation loop
+          renderer.setAnimationLoop(() => {
+            if (
+              videoElement &&
+              videoElement.readyState >= videoElement.HAVE_CURRENT_DATA
+            ) {
+              videoTexture.needsUpdate = true;
+            }
+            renderer.render(scene, camera);
+          });
+        } catch (err) {
+          console.error("❌ AR Error:", err);
+          alert("Error: " + err.message);
+          overlay.classList.remove("hidden");
+          startBtn.disabled = false;
+          startBtn.textContent = "📸 Mulai AR Experience";
+        }
+      }
+    </script>
+  </body>
 </html>

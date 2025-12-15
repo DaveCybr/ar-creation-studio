@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.147.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.147.0/examples/jsm/",
+          "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { MindARThree } from "mindar-image-three";
+
+      const mindarThree = new MindARThree({
+        container: document.querySelector("#container"),
+        imageTargetSrc:
+          "https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind",
+        maxTrack: 1,
+        warmupTolerance: 0,
+        missTolerance: 5,
+      });
+
+      const { renderer, scene, camera } = mindarThree;
+
+      // Buat elemen video
+      const video = document.createElement("video");
+      video.src = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+      video.crossOrigin = "anonymous";
+      video.loop = true;
+      video.muted = true;
+      video.playsInline = true; // Penting untuk iOS
+
+      // Wait for video to be ready
+      video.addEventListener('loadeddata', () => {
+        console.log('Video loaded, ready to play');
+      });
+
+      // Buat texture dari video dengan setting yang kompatibel
+      const texture = new THREE.VideoTexture(video);
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      
+      // Hapus format specification yang menyebabkan error
+      // texture.format akan auto-detect
+
+      const anchor = mindarThree.addAnchor(0);
+      const geometry = new THREE.PlaneGeometry(1, 0.55);
+      const material = new THREE.MeshBasicMaterial({
+        map: texture,
+        side: THREE.DoubleSide,
+      });
+      const plane = new THREE.Mesh(geometry, material);
+      anchor.group.add(plane);
+
+      let isTracking = false;
+      let trackingLostTimeout = null;
+
+      anchor.onTargetFound = () => {
+        // Clear timeout jika ada
+        if (trackingLostTimeout) {
+          clearTimeout(trackingLostTimeout);
+          trackingLostTimeout = null;
+        }
+        
+        if (!isTracking) {
+          isTracking = true;
+          video.play().catch(err => {
+            console.log('Video play error:', err);
+          });
+          console.log("Marker found");
+          document.getElementById("status").textContent = "✓ Tracking";
+          document.getElementById("status").style.background = "rgba(0, 255, 0, 0.8)";
+        }
+      };
+
+      anchor.onTargetLost = () => {
+        // Delay pause untuk menghindari flicker
+        trackingLostTimeout = setTimeout(() => {
+          if (isTracking) {
+            isTracking = false;
+            video.pause();
+            console.log("Marker lost");
+            document.getElementById("status").textContent = "✗ Lost";
+            document.getElementById("status").style.background = "rgba(255, 0, 0, 0.8)";
+          }
+        }, 500); // Wait 500ms sebelum benar-benar pause
+      };
+
+      const start = async () => {
+        try {
+          document.getElementById("info").textContent = "Starting AR...";
+          await mindarThree.start();
+          
+          let lastTime = performance.now();
+          let frames = 0;
+          
+          renderer.setAnimationLoop(() => {
+            frames++;
+            const currentTime = performance.now();
+            
+            if (currentTime - lastTime > 1000) {
+              const fps = Math.round((frames * 1000) / (currentTime - lastTime));
+              document.getElementById("fps").textContent = `FPS: ${fps}`;
+              frames = 0;
+              lastTime = currentTime;
+            }
+            
+            renderer.render(scene, camera);
+          });
+          
+          document.getElementById("info").textContent = "AR Started! Arahkan ke marker";
+          document.getElementById("tips").style.display = "none";
+        } catch (error) {
+          console.error("Start error:", error);
+          document.getElementById("info").textContent = "Error: " + error.message;
+        }
+      };
+
+      const startButton = document.querySelector("#startButton");
+      startButton.addEventListener("click", () => {
+        start();
+        startButton.disabled = true;
+      });
+
+      const stopButton = document.querySelector("#stopButton");
+      stopButton.addEventListener("click", () => {
+        if (trackingLostTimeout) {
+          clearTimeout(trackingLostTimeout);
+        }
+        mindarThree.stop();
+        mindarThree.renderer.setAnimationLoop(null);
+        video.pause();
+        startButton.disabled = false;
+        isTracking = false;
+        document.getElementById("info").textContent = "AR Stopped";
+        document.getElementById("status").textContent = "Stopped";
+        document.getElementById("status").style.background = "rgba(128, 128, 128, 0.8)";
+      });
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #000;
+      }
+      #container {
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+        overflow: hidden;
+      }
+      #control {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 2;
+        display: flex;
+        gap: 10px;
+      }
+      button {
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background: #00ffff;
+        border: none;
+        border-radius: 5px;
+        font-weight: bold;
+        transition: background 0.3s;
+      }
+      button:hover:not(:disabled) {
+        background: #00cccc;
+      }
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+      }
+      #info {
+        position: fixed;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ffff;
+        padding: 10px 15px;
+        border-radius: 5px;
+        z-index: 2;
+        font-size: 13px;
+      }
+      #fps {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #00ff00;
+        padding: 8px 12px;
+        border-radius: 5px;
+        z-index: 2;
+        font-size: 12px;
+        font-family: monospace;
+      }
+      #status {
+        position: fixed;
+        top: 50px;
+        right: 10px;
+        background: rgba(128, 128, 128, 0.8);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 5px;
+        z-index: 2;
+        font-size: 12px;
+        font-weight: bold;
+        transition: background 0.3s;
+      }
+      #tips {
+        position: fixed;
+        top: 50px;
+        left: 10px;
+        right: 10px;
+        background: rgba(255, 165, 0, 0.9);
+        color: #000;
+        padding: 10px;
+        border-radius: 5px;
+        z-index: 2;
+        font-size: 11px;
+        max-width: 300px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="control">
+      <button id="startButton">Start AR</button>
+      <button id="stopButton">Stop</button>
+    </div>
+    <div id="fps">FPS: --</div>
+    <div id="status">Ready</div>
+    <div id="tips">
+      <strong>Tips untuk smooth tracking:</strong><br>
+      • Pencahayaan yang cukup<br>
+      • Jarak marker 20-50cm dari kamera<br>
+      • Marker rata & tidak mengkilap<br>
+      • Kamera stabil (tidak goyang)<br>
+      • Download marker: <a href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png" target="_blank" style="color: #000; font-weight: bold;">Click here</a>
+    </div>
+    <div id="info">
+      Klik "Start AR" untuk memulai
+    </div>
+    <div id="container"></div>
+  </body>
+</html
