@@ -85,6 +85,7 @@
     }
     #startBtn:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 212, 255, 0.4); }
     #startBtn:active { transform: translateY(0); }
+    #startBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
     .download-link {
       margin-top: 16px;
       color: #00d4ff;
@@ -125,7 +126,19 @@
       0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
       50% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
     }
+    .loading-text { font-size: 12px; color: #888; margin-top: 10px; }
   </style>
+
+  <!-- Import Map for ES Modules -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
 </head>
 <body>
   <!-- Overlay -->
@@ -149,7 +162,8 @@
       </ul>
     </div>
     
-    <button id="startBtn">📸 Mulai AR Experience</button>
+    <button id="startBtn" disabled>Loading libraries...</button>
+    <div id="loadingText" class="loading-text">Initializing AR engine...</div>
     
     <a class="download-link" href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png" target="_blank">
       📥 Download Target Card
@@ -163,18 +177,22 @@
   </div>
 
   <!-- Scan Guide -->
-  <div class="scan-guide" id="scanGuide"></div>
+  <div class="scan-guide hidden" id="scanGuide"></div>
 
   <!-- AR Container -->
   <div id="container"></div>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"></script>
+  <!-- Main Script as ES Module -->
+  <script type="module">
+    import * as THREE from 'three';
+    import { MindARThree } from 'mindar-image-three';
 
-  <script>
+    // Make THREE available globally for debugging
+    window.THREE = THREE;
+
     const overlay = document.getElementById('overlay');
     const startBtn = document.getElementById('startBtn');
+    const loadingText = document.getElementById('loadingText');
     const container = document.getElementById('container');
     const status = document.getElementById('status');
     const statusIcon = document.getElementById('statusIcon');
@@ -185,10 +203,19 @@
     let videoElement = null;
     let isTracking = false;
 
+    // Enable button after libraries loaded
+    startBtn.disabled = false;
+    startBtn.textContent = '📸 Mulai AR Experience';
+    loadingText.style.display = 'none';
+    console.log('✅ MindAR & Three.js loaded via ES Modules');
+
     startBtn.addEventListener('click', startAR);
 
     async function startAR() {
       try {
+        startBtn.disabled = true;
+        startBtn.textContent = 'Starting...';
+
         // Request camera permission
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: 'environment' }
@@ -200,7 +227,7 @@
         scanGuide.classList.remove('hidden');
 
         // Initialize MindAR
-        mindarThree = new window.MINDAR.IMAGE.MindARThree({
+        mindarThree = new MindARThree({
           container: container,
           imageTargetSrc: 'https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind',
           uiLoading: 'no',
@@ -210,6 +237,7 @@
 
         const { renderer, scene, camera } = mindarThree;
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
 
         // Create video element
         videoElement = document.createElement('video');
@@ -223,17 +251,18 @@
         // Wait for video metadata
         await new Promise((resolve, reject) => {
           videoElement.onloadedmetadata = resolve;
-          videoElement.onerror = reject;
+          videoElement.onerror = () => reject(new Error('Failed to load video'));
           videoElement.load();
         });
 
-        console.log('Video loaded:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+        console.log('📹 Video loaded:', videoElement.videoWidth, 'x', videoElement.videoHeight);
 
         // Create video texture
         const videoTexture = new THREE.VideoTexture(videoElement);
         videoTexture.minFilter = THREE.LinearFilter;
         videoTexture.magFilter = THREE.LinearFilter;
         videoTexture.colorSpace = THREE.SRGBColorSpace;
+        videoTexture.generateMipmaps = false;
 
         // Target card aspect ratio ~1:0.55
         const targetWidth = 1;
@@ -244,12 +273,16 @@
         // COVER mode: fill target, crop excess
         let planeWidth, planeHeight;
         if (videoAspect > targetAspect) {
+          // Video is wider - match height, crop sides
           planeHeight = targetHeight;
           planeWidth = targetHeight * videoAspect;
         } else {
+          // Video is taller (portrait) - match width, crop top/bottom
           planeWidth = targetWidth;
           planeHeight = targetWidth / videoAspect;
         }
+
+        console.log('📐 Plane size:', planeWidth.toFixed(2), 'x', planeHeight.toFixed(2));
 
         // Create video plane
         const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
@@ -266,43 +299,42 @@
 
         // Target events
         anchor.onTargetFound = () => {
-          console.log('Target found!');
+          console.log('🎯 Target found!');
           isTracking = true;
           status.classList.add('tracking');
           statusIcon.textContent = '✅';
           statusText.textContent = 'Playing';
           scanGuide.classList.add('hidden');
-          videoElement.play().catch(e => console.warn(e));
+          videoElement.play().catch(e => console.warn('Play error:', e));
         };
 
         anchor.onTargetLost = () => {
-          console.log('Target lost');
-          setTimeout(() => {
-            if (!isTracking) return;
-            isTracking = false;
-            status.classList.remove('tracking');
-            statusIcon.textContent = '🔍';
-            statusText.textContent = 'Scanning...';
-            scanGuide.classList.remove('hidden');
-          }, 1000);
+          console.log('👻 Target lost');
+          isTracking = false;
+          status.classList.remove('tracking');
+          statusIcon.textContent = '🔍';
+          statusText.textContent = 'Scanning...';
+          scanGuide.classList.remove('hidden');
         };
 
         // Start AR
         await mindarThree.start();
-        console.log('MindAR started');
+        console.log('✅ MindAR started successfully');
 
         // Animation loop
         renderer.setAnimationLoop(() => {
-          if (videoElement.readyState >= videoElement.HAVE_CURRENT_DATA) {
+          if (videoElement && videoElement.readyState >= videoElement.HAVE_CURRENT_DATA) {
             videoTexture.needsUpdate = true;
           }
           renderer.render(scene, camera);
         });
 
       } catch (err) {
-        console.error('AR Error:', err);
+        console.error('❌ AR Error:', err);
         alert('Error: ' + err.message);
         overlay.classList.remove('hidden');
+        startBtn.disabled = false;
+        startBtn.textContent = '📸 Mulai AR Experience';
       }
     }
   </script>
