@@ -209,9 +209,12 @@ export default function ARViewer() {
       "position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;";
 
     // Detect if mobile device
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
     const isAndroid = /Android/i.test(navigator.userAgent);
-    
+
     // For Android mobile: video plane needs different rotation to appear correctly
     // Desktop/iOS: -90 0 0, Android mobile: -90 0 0 but with scale adjustment
     const videoRotation = "-90 0 0";
@@ -229,7 +232,7 @@ export default function ARViewer() {
         <a-assets>
           <video
             id="ar-video"
-            src="https://assets.mixkit.co/videos/preview/mixkit-woman-dancing-happily-in-front-of-a-pink-background-42296-large.mp4"
+            src="/public/assets/vid.mp4"
             preload="auto"
             loop
             muted
@@ -273,29 +276,37 @@ export default function ARViewer() {
       if (video) {
         // Force video to load metadata first
         video.load();
-        
-        video.addEventListener('loadedmetadata', () => {
-          console.log(`📹 Video size: ${video.videoWidth}x${video.videoHeight}`);
-          
+
+        video.addEventListener("loadedmetadata", () => {
+          console.log(
+            `📹 Video size: ${video.videoWidth}x${video.videoHeight}`
+          );
+
           // Calculate aspect ratio and update geometry
           const aspectRatio = video.videoWidth / video.videoHeight;
           const width = 1.6;
           const height = width / aspectRatio;
-          
+
           if (videoEntity) {
-            videoEntity.setAttribute('geometry', `primitive: plane; width: ${width}; height: ${height};`);
+            videoEntity.setAttribute(
+              "geometry",
+              `primitive: plane; width: ${width}; height: ${height};`
+            );
             console.log(`📐 Updated geometry: ${width}x${height}`);
           }
         });
 
         // For Android: ensure video is ready before texture update
-        video.addEventListener('canplaythrough', () => {
-          console.log('✅ Video can play through');
+        video.addEventListener("canplaythrough", () => {
+          console.log("✅ Video can play through");
           if (videoEntity) {
             // Force material refresh on Android
-            const material = (videoEntity as any).getAttribute('material');
+            const material = (videoEntity as any).getAttribute("material");
             if (material) {
-              (videoEntity as any).setAttribute('material', { ...material, src: '#ar-video' });
+              (videoEntity as any).setAttribute("material", {
+                ...material,
+                src: "#ar-video",
+              });
             }
           }
         });
