@@ -6,8 +6,8 @@
       name="viewport"
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
     />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <title>AR Video Experience</title>
+    <meta name="mobile-web-app-capable" content="yes" />
+    <title>AR Video Experience - Custom Marker</title>
 
     <!-- A-Frame -->
     <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
@@ -46,6 +46,7 @@
         justify-content: center;
         z-index: 10000;
         transition: opacity 0.5s ease;
+        overflow-y: auto;
       }
 
       #start-modal.hidden {
@@ -57,7 +58,8 @@
         text-align: center;
         color: white;
         padding: 40px 20px;
-        max-width: 400px;
+        max-width: 450px;
+        width: 90%;
       }
 
       .modal-icon {
@@ -90,6 +92,99 @@
         line-height: 1.5;
       }
 
+      /* Upload Section */
+      .upload-section {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 25px;
+        margin-bottom: 25px;
+        border: 2px dashed rgba(255, 255, 255, 0.3);
+      }
+
+      .upload-title {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 15px;
+      }
+
+      .upload-options {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+
+      .upload-btn {
+        flex: 1;
+        background: white;
+        color: #667eea;
+        border: none;
+        padding: 15px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+      }
+
+      .upload-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .upload-btn:active {
+        transform: translateY(0);
+      }
+
+      .upload-btn.secondary {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+      }
+
+      #file-input,
+      #mind-file-input {
+        display: none;
+      }
+
+      .preview-container {
+        margin-top: 15px;
+        display: none;
+      }
+
+      .preview-container.visible {
+        display: block;
+      }
+
+      .preview-image {
+        max-width: 100%;
+        max-height: 200px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .preview-info {
+        font-size: 13px;
+        opacity: 0.9;
+        margin-bottom: 8px;
+      }
+
+      .info-box {
+        background: rgba(255, 255, 255, 0.15);
+        padding: 12px;
+        border-radius: 10px;
+        font-size: 12px;
+        line-height: 1.5;
+        margin-top: 10px;
+      }
+
+      .info-box a {
+        color: #ffd700;
+        text-decoration: none;
+        font-weight: 600;
+      }
+
       #start-btn {
         background: white;
         color: #667eea;
@@ -112,6 +207,12 @@
 
       #start-btn:active {
         transform: translateY(0);
+      }
+
+      #start-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
       }
 
       .permission-note {
@@ -165,6 +266,12 @@
         color: white;
         font-size: 16px;
         font-weight: 500;
+        margin-bottom: 10px;
+      }
+
+      .loading-progress {
+        color: rgba(255, 255, 255, 0.6);
+        font-size: 14px;
       }
 
       /* Top UI Bar */
@@ -287,6 +394,8 @@
         padding: 30px;
         max-width: 90%;
         width: 350px;
+        max-height: 80vh;
+        overflow-y: auto;
       }
 
       .menu-title {
@@ -325,23 +434,6 @@
         cursor: pointer;
       }
 
-      .download-link {
-        display: block;
-        margin-top: 15px;
-        padding: 12px;
-        background: #f0f0f0;
-        border-radius: 10px;
-        text-decoration: none;
-        color: #667eea;
-        font-weight: 500;
-        text-align: center;
-        transition: all 0.2s ease;
-      }
-
-      .download-link:active {
-        transform: scale(0.98);
-      }
-
       @media (max-width: 768px) {
         .modal-title {
           font-size: 28px;
@@ -349,6 +441,10 @@
 
         .modal-icon {
           font-size: 60px;
+        }
+
+        .upload-options {
+          flex-direction: column;
         }
       }
     </style>
@@ -360,17 +456,61 @@
         <div class="modal-icon">📷</div>
         <h1 class="modal-title">AR Video Experience</h1>
         <p class="modal-subtitle">
-          Point your camera at the target image to see an amazing AR video
+          Upload compiled .mind file or use default marker
         </p>
-        <button id="start-btn">Start</button>
-        <p class="permission-note">Allow camera and audio access to begin</p>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+          <div class="upload-title">📤 Choose Marker</div>
+          <div class="upload-options">
+            <button
+              class="upload-btn"
+              onclick="document.getElementById('mind-file-input').click()"
+            >
+              Upload .mind
+            </button>
+            <button class="upload-btn secondary" id="use-default-btn">
+              Use Default
+            </button>
+          </div>
+          <input type="file" id="mind-file-input" accept=".mind" />
+          <input
+            type="file"
+            id="file-input"
+            accept="image/*"
+            style="display: none"
+          />
+
+          <div class="preview-container" id="preview-container">
+            <div class="preview-info">✅ Marker file ready</div>
+          </div>
+
+          <div class="info-box">
+            📝 <strong>How to create .mind file:</strong><br />
+            1. Visit
+            <a
+              href="https://hiukim.github.io/mind-ar-js-doc/tools/compile"
+              target="_blank"
+              >MindAR Compiler</a
+            ><br />
+            2. Upload your image (PNG/JPG with details)<br />
+            3. Download the .mind file<br />
+            4. Upload it here!
+          </div>
+        </div>
+
+        <button id="start-btn" disabled>Start AR</button>
+        <p class="permission-note">Allow camera access to begin</p>
       </div>
     </div>
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="hidden">
       <div class="loading-spinner"></div>
-      <div class="loading-text">Loading tracking system...</div>
+      <div class="loading-text" id="loading-text">
+        Loading tracking system...
+      </div>
+      <div class="loading-progress" id="loading-progress"></div>
     </div>
 
     <!-- Top UI -->
@@ -390,16 +530,10 @@
       <div class="menu-content">
         <h2 class="menu-title">Menu</h2>
         <div class="menu-item" onclick="window.location.reload()">
-          🔄 Restart Experience
+          🔄 Restart & Change Marker
         </div>
         <div class="menu-item" id="help-item">❓ Help</div>
-        <a
-          href="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.png"
-          target="_blank"
-          class="download-link"
-        >
-          📥 Download Target Image
-        </a>
+        <div class="menu-item" id="compiler-link">🔧 Open MindAR Compiler</div>
         <button
           class="menu-close"
           onclick="document.getElementById('menu-modal').classList.remove('visible')"
@@ -411,18 +545,19 @@
 
     <!-- AR Scene -->
     <a-scene
+      id="ar-scene"
       mindar-image="imageTargetSrc: https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.5/examples/image-tracking/assets/card-example/card.mind; 
                   filterMinCF: 0.0001; 
                   filterBeta: 10;
                   warmupTolerance: 5;
-                  missTolerance: 5;"
+                  missTolerance: 5;
+                  autoStart: false;"
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights: false, antialias: true, alpha: true"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
       embedded
     >
-      <!-- Assets -->
       <a-assets>
         <video
           id="vid"
@@ -437,12 +572,9 @@
         ></video>
       </a-assets>
 
-      <!-- Camera -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-      <!-- Target Entity -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <!-- Video Portrait -->
         <a-video
           src="#vid"
           position="0 0 0.1"
@@ -451,7 +583,6 @@
           rotation="0 0 0"
         ></a-video>
 
-        <!-- Glowing frame -->
         <a-entity position="0 0 0.05">
           <a-box
             position="-0.29 0.52 0"
@@ -480,87 +611,199 @@
     <script>
       const startModal = document.getElementById("start-modal");
       const loadingOverlay = document.getElementById("loading-overlay");
+      const loadingText = document.getElementById("loading-text");
+      const loadingProgress = document.getElementById("loading-progress");
       const topUI = document.getElementById("top-ui");
       const bottomStatus = document.getElementById("bottom-status");
       const statusText = document.getElementById("status-text");
       const statusDot = document.querySelector(".status-dot");
       const startBtn = document.getElementById("start-btn");
+      const mindFileInput = document.getElementById("mind-file-input");
+      const previewContainer = document.getElementById("preview-container");
+      const useDefaultBtn = document.getElementById("use-default-btn");
       const menuBtn = document.getElementById("menu-btn");
       const infoBtn = document.getElementById("info-btn");
       const menuModal = document.getElementById("menu-modal");
       const helpItem = document.getElementById("help-item");
-      const video = document.getElementById("vid");
+      const compilerLink = document.getElementById("compiler-link");
+      const arScene = document.getElementById("ar-scene");
 
-      let arStarted = false;
+      let customMarkerData = null;
+      let useDefault = false;
 
-      // Start button click
-      startBtn.addEventListener("click", () => {
-        startModal.classList.add("hidden");
-        loadingOverlay.classList.remove("hidden");
-
-        setTimeout(() => {
-          arStarted = true;
-        }, 500);
+      // Use default marker
+      useDefaultBtn.addEventListener("click", () => {
+        useDefault = true;
+        previewContainer.classList.add("visible");
+        startBtn.disabled = false;
+        console.log("✅ Using default marker");
       });
 
-      // Scene loaded
-      const sceneEl = document.querySelector("a-scene");
-      sceneEl.addEventListener("loaded", () => {
-        console.log("✅ AR Scene loaded");
+      // Upload .mind file
+      mindFileInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          loadingText.textContent = "Loading marker file...";
+          loadingOverlay.classList.remove("hidden");
 
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            customMarkerData = arrayBuffer;
+
+            previewContainer.classList.add("visible");
+            startBtn.disabled = false;
+            loadingOverlay.classList.add("hidden");
+
+            console.log("✅ Custom .mind file loaded");
+          } catch (error) {
+            console.error("Error loading file:", error);
+            alert("Failed to load .mind file. Please try again.");
+            loadingOverlay.classList.add("hidden");
+          }
+        }
+      });
+
+      // Start AR
+      startBtn.addEventListener("click", async () => {
+        startModal.classList.add("hidden");
+        loadingOverlay.classList.remove("hidden");
+        loadingText.textContent = "Initializing AR...";
+        loadingProgress.textContent = "Please wait...";
+
+        try {
+          const sceneEl = document.querySelector("a-scene");
+
+          if (!useDefault && customMarkerData) {
+            // Convert ArrayBuffer to base64
+            const base64 = arrayBufferToBase64(customMarkerData);
+            const dataUrl = `data:application/octet-stream;base64,${base64}`;
+
+            // Update scene with custom marker
+            sceneEl.setAttribute(
+              "mindar-image",
+              `imageTargetSrc: ${dataUrl}; filterMinCF: 0.0001; filterBeta: 10; warmupTolerance: 5; missTolerance: 5;`
+            );
+            console.log("✅ Custom marker set");
+
+            // Force scene to reload with new marker
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+
+          setupARScene();
+        } catch (error) {
+          console.error("Error:", error);
+          loadingText.textContent = "Error initializing AR";
+          loadingProgress.textContent = error.message;
+          setTimeout(() => {
+            alert("Failed to initialize AR. Please try again.");
+            window.location.reload();
+          }, 2000);
+        }
+      });
+
+      // Convert ArrayBuffer to base64
+      function arrayBufferToBase64(buffer) {
+        let binary = "";
+        const bytes = new Uint8Array(buffer);
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        return btoa(binary);
+      }
+
+      // Setup AR Scene
+      function setupARScene() {
+        const sceneEl = document.querySelector("a-scene");
+
+        // Start MindAR
+        sceneEl.addEventListener("renderstart", () => {
+          console.log("🎬 AR rendering started");
+          const mindarSystem = sceneEl.systems["mindar-image-system"];
+          if (mindarSystem) {
+            mindarSystem.start();
+            console.log("✅ MindAR system started");
+          }
+        });
+
+        // Check if scene is already loaded
+        if (sceneEl.hasLoaded) {
+          console.log("✅ AR Scene already loaded");
+          onSceneReady();
+        } else {
+          sceneEl.addEventListener("loaded", () => {
+            console.log("✅ AR Scene loaded");
+            onSceneReady();
+          });
+        }
+      }
+
+      function onSceneReady() {
         setTimeout(() => {
           loadingOverlay.classList.add("hidden");
           topUI.classList.add("visible");
           bottomStatus.classList.add("visible");
-        }, 2000);
-      });
 
-      // Menu button
+          setupAREvents();
+        }, 1500);
+      }
+
+      // Setup AR events
+      function setupAREvents() {
+        const video = document.getElementById("vid");
+        const targetEl = document.querySelector("[mindar-image-target]");
+
+        if (!targetEl) {
+          console.error("Target element not found");
+          return;
+        }
+
+        targetEl.addEventListener("targetFound", () => {
+          console.log("✅ Target found!");
+          statusText.textContent = "Target detected • Playing";
+          statusDot.classList.add("active");
+
+          if (video && video.paused) {
+            video.play().catch((err) => {
+              video.muted = true;
+              video.play();
+            });
+          }
+        });
+
+        targetEl.addEventListener("targetLost", () => {
+          console.log("❌ Target lost");
+          statusText.textContent = "Scanning for target...";
+          statusDot.classList.remove("active");
+
+          if (video && !video.paused) {
+            video.pause();
+          }
+        });
+      }
+
+      // UI Buttons
       menuBtn.addEventListener("click", () => {
         menuModal.classList.add("visible");
       });
 
-      // Info button
       infoBtn.addEventListener("click", () => {
         alert(
-          "Point your camera at the target image to see the AR video. Make sure you have good lighting and hold your device steady."
+          "Point your camera at your marker image to see the AR video. Make sure you have good lighting and hold your device steady."
         );
       });
 
-      // Help item
       helpItem.addEventListener("click", () => {
         alert(
-          "Tips:\n\n1. Download and print the target image\n2. Point your camera directly at it\n3. Keep steady for best tracking\n4. Ensure good lighting"
+          "How to use:\n\n1. Create .mind file at MindAR Compiler\n2. Upload the .mind file here\n3. Print or display the original image\n4. Point camera at the image\n\nOR use the default marker!"
         );
       });
 
-      // Target detection
-      const targetEl = document.querySelector("[mindar-image-target]");
-
-      targetEl.addEventListener("targetFound", () => {
-        console.log("✅ Target found!");
-        statusText.textContent = "Target detected • Playing";
-        statusDot.classList.add("active");
-
-        // Play video
-        if (video.paused) {
-          video.play().catch((err) => {
-            console.log("Play error:", err);
-            video.muted = true;
-            video.play();
-          });
-        }
-      });
-
-      targetEl.addEventListener("targetLost", () => {
-        console.log("❌ Target lost");
-        statusText.textContent = "Scanning for target...";
-        statusDot.classList.remove("active");
-
-        // Pause video
-        if (!video.paused) {
-          video.pause();
-        }
+      compilerLink.addEventListener("click", () => {
+        window.open(
+          "https://hiukim.github.io/mind-ar-js-doc/tools/compile",
+          "_blank"
+        );
       });
 
       console.log("🚀 AR Video Experience initialized");
